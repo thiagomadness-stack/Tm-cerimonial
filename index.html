@@ -442,7 +442,13 @@
     <div class="menu-label" style="margin-top:10px">Meus Eventos</div>
     <div id="event-list"></div>
   </div>
-  <div id="sidebar-footer">v1.0 · TM Cerimonial</div>
+  <div id="sidebar-footer">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <span style="font-size:11px;color:#555;">v1.0 · TM Cerimonial</span>
+      <button onclick="openSyncConfig()" title="Configurar sincronização" style="background:#252540;border:1px solid #444;color:#aaa;border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;">🔗 Sync</button>
+    </div>
+    <div id="sync-status" style="font-size:11px;color:#888;min-height:14px;"></div>
+  </div>
 
 </div>
 
@@ -1087,33 +1093,99 @@ function loadData() {
 }
 function saveData(evs) {
   localStorage.setItem('tm_eventos', JSON.stringify(evs));
+  syncToGitHub(evs);
 }
 
-// Sincronização com o servidor (para acesso pelo celular)
-async function syncData() {
+// ==================== GITHUB SYNC ====================
+const GH_REPO = 'thiagomadness-stack/Tm-cerimonial';
+const GH_FILE = 'data.json';
+
+function getGHToken() { return localStorage.getItem('tm_gh_token') || ''; }
+
+function setSyncStatus(msg, color) {
+  const el = document.getElementById('sync-status');
+  if (el) { el.textContent = msg; el.style.color = color || '#888'; }
+}
+
+let _syncTimer = null;
+async function syncToGitHub(evs) {
+  const token = getGHToken();
+  if (!token) return;
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(async () => {
+    setSyncStatus('🔄 Salvando...', '#c9a84c');
+    try {
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(evs))));
+      const getRes = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+        headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }
+      });
+      let sha = '';
+      if (getRes.ok) { const d = await getRes.json(); sha = d.sha; }
+      const body = { message: 'sync', content, ...(sha ? { sha } : {}) };
+      const putRes = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+        method: 'PUT',
+        headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github.v3+json' },
+        body: JSON.stringify(body)
+      });
+      if (putRes.ok) setSyncStatus('✅ Sincronizado', '#4caf7d');
+      else setSyncStatus('❌ Erro ao salvar', '#e05555');
+    } catch { setSyncStatus('❌ Sem conexão', '#e05555'); }
+  }, 1500);
+}
+
+async function loadFromGitHub() {
+  const token = getGHToken();
+  if (!token) return;
+  setSyncStatus('🔄 Carregando...', '#c9a84c');
   try {
-    const data = localStorage.getItem('tm_eventos') || '[]';
-    const res = await fetch('/sync', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: data });
-    if (res.ok) toast('✅ Sincronizado! Celular atualizado.');
-    else toast('Erro ao sincronizar');
-  } catch { toast('Servidor não encontrado'); }
+    const res = await fetch(`https://raw.githubusercontent.com/${GH_REPO}/main/${GH_FILE}?t=${Date.now()}`);
+    if (!res.ok) { setSyncStatus('', ''); return; }
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      localStorage.setItem('tm_eventos', JSON.stringify(data));
+      events = data;
+      setSyncStatus('✅ Atualizado', '#4caf7d');
+      renderSidebarEvents();
+      showDashboard();
+    } else {
+      setSyncStatus('✅ Conectado', '#4caf7d');
+    }
+  } catch { setSyncStatus('❌ Sem conexão', '#e05555'); }
+}
+
+function openSyncConfig() {
+  const token = getGHToken();
+  document.body.insertAdjacentHTML('beforeend', `<div style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;" id="sync-modal">
+    <div style="background:#fff;padding:28px;border-radius:12px;width:400px;max-width:92vw;">
+      <h3 style="margin-bottom:12px;font-size:16px;">🔗 Sincronização entre dispositivos</h3>
+      <p style="font-size:13px;color:#666;margin-bottom:14px;">Insira seu token do GitHub para sincronizar os dados automaticamente em qualquer navegador ou celular.</p>
+      <label style="font-size:12px;color:#888;display:block;margin-bottom:4px;">Token do GitHub (Personal Access Token)</label>
+      <input id="gh-token-input" type="password" value="${token}" placeholder="ghp_..." style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:6px;margin-bottom:6px;font-size:13px;">
+      <p style="font-size:11px;color:#aaa;margin-bottom:16px;">O token fica salvo apenas neste navegador. Permissões necessárias: <b>repo</b> (Contents read/write).</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="document.getElementById('sync-modal').remove()" style="padding:8px 18px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer;font-size:13px;">Cancelar</button>
+        <button onclick="saveSyncToken()" style="padding:8px 18px;background:#c9a84c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Salvar</button>
+      </div>
+    </div>
+  </div>`);
+}
+
+function saveSyncToken() {
+  const token = document.getElementById('gh-token-input').value.trim();
+  document.getElementById('sync-modal').remove();
+  if (token) {
+    localStorage.setItem('tm_gh_token', token);
+    toast('🔗 Token salvo! Carregando dados...', 'success');
+    loadFromGitHub();
+  } else {
+    localStorage.removeItem('tm_gh_token');
+    setSyncStatus('', '');
+    toast('Sincronização desativada');
+  }
 }
 
 async function loadFromServer() {
-  try {
-    const res = await fetch('/dados.json');
-    if (!res.ok) return;
-    const data = await res.json();
-    if (Array.isArray(data) && data.length > 0) {
-      const local = loadData();
-      if (local.length === 0) {
-        localStorage.setItem('tm_eventos', JSON.stringify(data));
-        events = data;
-        toast('📲 Dados carregados do servidor');
-        showDashboard();
-      }
-    }
-  } catch {}
+  await loadFromGitHub();
 }
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 

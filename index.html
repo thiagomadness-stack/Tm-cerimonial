@@ -1175,8 +1175,12 @@ function saveSyncToken() {
   document.getElementById('sync-modal').remove();
   if (token) {
     localStorage.setItem('tm_gh_token', token);
-    toast('🔗 Token salvo! Carregando dados...', 'success');
-    loadFromGitHub();
+    toast('🔗 Token salvo! Sincronizando...', 'success');
+    // Tenta carregar do GitHub; se não existir, envia os dados locais
+    loadFromGitHub().then(() => {
+      const status = document.getElementById('sync-status')?.textContent || '';
+      if (!status.includes('✅')) syncToGitHub(events);
+    });
   } else {
     localStorage.removeItem('tm_gh_token');
     setSyncStatus('', '');

@@ -1333,8 +1333,8 @@ function switchTab(tab) {
 function calcCkCount(ev) {
   let total = 0, done = 0;
   ev.categorias.forEach(cat => {
-    cat.items.filter(it => !it.pacoteId).forEach(it => { total++; if (it.ok) done++; });
-    (cat.pacotes || []).forEach(p => { total++; if (p.ok) done++; });
+    cat.items.filter(it => !it.pacoteId).forEach(it => { total++; if (isCkDone(it)) done++; });
+    (cat.pacotes || []).forEach(p => { total++; if (isCkDone(p)) done++; });
   });
   return `${done}/${total}`;
 }
@@ -1524,6 +1524,10 @@ function renderOrganizacao(ev, container) {
   container.innerHTML = html;
 }
 
+function isCkDone(it) {
+  return it.ok || it.status === 'fechado' || it.status === 'pago';
+}
+
 function ckItemStatus(ok, prazo, prazoSug, mesesRestantes, catNome) {
   if (ok) return 'ok';
   const prazoExibir = prazo || prazoSug;
@@ -1558,20 +1562,22 @@ function renderChecklist(ev, container) {
     const rows = [];
 
     cat.items.filter(it => !it.pacoteId).forEach((it, ii) => {
-      const st = ckItemStatus(it.ok, it.prazo, prazoSug, mesesRestantes, catNome);
-      rows.push({ it, ref: `'${ev.id}',${ci},'item',${ii}`, st, prazoSug });
+      const ckDone = isCkDone(it);
+      const st = ckItemStatus(ckDone, it.prazo, prazoSug, mesesRestantes, catNome);
+      rows.push({ it, ref: `'${ev.id}',${ci},'item',${ii}`, st, prazoSug, ckDone });
       total++;
-      if (it.ok) done++;
-      if (st === 'atrasado') atrasados.push({ it, catNome, ref: `'${ev.id}',${ci},'item',${ii}` });
-      else if (st === 'urgente') urgentes.push({ it, catNome, ref: `'${ev.id}',${ci},'item',${ii}` });
+      if (ckDone) done++;
+      if (st === 'atrasado') atrasados.push({ it, catNome, ref: `'${ev.id}',${ci},'item',${ii}`, ckDone });
+      else if (st === 'urgente') urgentes.push({ it, catNome, ref: `'${ev.id}',${ci},'item',${ii}`, ckDone });
     });
     (cat.pacotes || []).forEach((pac, pi) => {
-      const st = ckItemStatus(pac.ok, pac.prazo, prazoSug, mesesRestantes, catNome);
-      rows.push({ it: pac, ref: `'${ev.id}',${ci},'pac',${pi}`, st, prazoSug, isPac: true });
+      const ckDone = isCkDone(pac);
+      const st = ckItemStatus(ckDone, pac.prazo, prazoSug, mesesRestantes, catNome);
+      rows.push({ it: pac, ref: `'${ev.id}',${ci},'pac',${pi}`, st, prazoSug, isPac: true, ckDone });
       total++;
-      if (pac.ok) done++;
-      if (st === 'atrasado') atrasados.push({ it: pac, catNome, ref: `'${ev.id}',${ci},'pac',${pi}` });
-      else if (st === 'urgente') urgentes.push({ it: pac, catNome, ref: `'${ev.id}',${ci},'pac',${pi}` });
+      if (ckDone) done++;
+      if (st === 'atrasado') atrasados.push({ it: pac, catNome, ref: `'${ev.id}',${ci},'pac',${pi}`, ckDone });
+      else if (st === 'urgente') urgentes.push({ it: pac, catNome, ref: `'${ev.id}',${ci},'pac',${pi}`, ckDone });
     });
 
     if (rows.length) catGroups.push({ cat, ci, catNome, prazoSug, rows });
@@ -1581,7 +1587,7 @@ function renderChecklist(ev, container) {
   const progressColor = pct < 30 ? 'var(--danger)' : pct < 70 ? 'var(--warning)' : 'var(--success)';
 
   const phaseChips = catGroups.map(({catNome, rows}) => {
-    const d = rows.filter(r=>r.it.ok).length;
+    const d = rows.filter(r=>r.ckDone).length;
     const isDone = d === rows.length;
     const hasAt = rows.some(r=>r.st==='atrasado');
     const attr = isDone ? 'class="phase-chip done"'
@@ -1599,9 +1605,9 @@ function renderChecklist(ev, container) {
         <span class="atrasado-count">${atrasados.length}</span>
         <span style="font-size:11px;font-weight:400;color:var(--danger)">— prazo passou e ainda não concluídos</span>
       </div><div class="atrasado-list">`;
-    atrasados.forEach(({it, catNome, ref}) => {
+    atrasados.forEach(({it, catNome, ref, ckDone}) => {
       html += `<div class="atrasado-item">
-        <input type="checkbox" class="check-cb" ${it.ok?'checked':''} onchange="toggleCkItem(${ref},this.checked)">
+        <input type="checkbox" class="check-cb" ${ckDone?'checked':''} onchange="toggleCkItem(${ref},this.checked)">
         <div class="atrasado-item-text">
           <div class="atrasado-item-name">${it.nome}</div>
           <div class="atrasado-item-etapa">${catNome}</div>
@@ -1617,9 +1623,9 @@ function renderChecklist(ev, container) {
         🔔 Atenção – Prazo chegando
         <span style="background:var(--warning);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px">${urgentes.length}</span>
       </div><div class="atrasado-list">`;
-    urgentes.forEach(({it, catNome, ref}) => {
+    urgentes.forEach(({it, catNome, ref, ckDone}) => {
       html += `<div class="atrasado-item" style="border-color:#ffd966">
-        <input type="checkbox" class="check-cb" ${it.ok?'checked':''} onchange="toggleCkItem(${ref},this.checked)">
+        <input type="checkbox" class="check-cb" ${ckDone?'checked':''} onchange="toggleCkItem(${ref},this.checked)">
         <div class="atrasado-item-text">
           <div class="atrasado-item-name">${it.nome}</div>
           <div class="atrasado-item-etapa">${catNome}</div>
@@ -1645,7 +1651,7 @@ function renderChecklist(ev, container) {
   catGroups.forEach(({cat, ci, catNome, prazoSug, rows}) => {
     const etKey = ev.id + '_ck_' + ci;
     const collapsed = collapsedEtapas[etKey];
-    const etDone = rows.filter(r=>r.it.ok).length;
+    const etDone = rows.filter(r=>r.ckDone).length;
     const etPct = Math.round(etDone/rows.length*100);
     const etAt = rows.filter(r=>r.st==='atrasado').length;
     const etColor = etAt>0?'var(--danger)':etPct===100?'var(--success)':etPct<70?'var(--warning)':'var(--success)';
@@ -1664,19 +1670,19 @@ function renderChecklist(ev, container) {
     if (!collapsed) {
       html += `<div class="etapa-progress-bar-wrap" style="border-radius:0;margin:0"><div class="etapa-progress-fill" style="width:${etPct}%;background:${etColor}"></div></div>
         <table class="checklist-table"><tbody>`;
-      rows.forEach(({it, ref, st, prazoSug}) => {
+      rows.forEach(({it, ref, st, prazoSug, ckDone}) => {
         const prazoVal = it.prazo || '';
         const prazoExibir = prazoVal || prazoSug;
-        const rowClass = it.ok ? 'done' : st==='atrasado' ? 'row-atrasado' : '';
-        const tag = !it.ok && st==='atrasado' ? '<span class="atrasado-tag">ATRASADO</span>'
-                  : !it.ok && st==='urgente'  ? '<span class="urgente-tag">URGENTE</span>' : '';
-        const prazoAtrasado = !it.ok && prazoExibir && new Date(prazoExibir) < new Date();
-        const prazoColor = it.ok ? '' : prazoAtrasado ? 'color:var(--danger);font-weight:600' : prazoExibir ? 'color:var(--warning)' : 'color:var(--muted)';
+        const rowClass = ckDone ? 'done' : st==='atrasado' ? 'row-atrasado' : '';
+        const tag = !ckDone && st==='atrasado' ? '<span class="atrasado-tag">ATRASADO</span>'
+                  : !ckDone && st==='urgente'  ? '<span class="urgente-tag">URGENTE</span>' : '';
+        const prazoAtrasado = !ckDone && prazoExibir && new Date(prazoExibir) < new Date();
+        const prazoColor = ckDone ? '' : prazoAtrasado ? 'color:var(--danger);font-weight:600' : prazoExibir ? 'color:var(--warning)' : 'color:var(--muted)';
         html += `<tr class="${rowClass}">
-          <td style="width:34px;text-align:center"><input type="checkbox" class="check-cb" ${it.ok?'checked':''} onchange="toggleCkItem(${ref},this.checked)"></td>
+          <td style="width:34px;text-align:center"><input type="checkbox" class="check-cb" ${ckDone?'checked':''} onchange="toggleCkItem(${ref},this.checked)"></td>
           <td class="check-item" style="width:200px">${it.nome}${tag}</td>
           <td style="width:130px;text-align:center">
-            <input type="date" value="${prazoVal}" title="Prazo${!prazoVal&&prazoSug?' (sugerido: '+fmtPrazo(prazoSug)+')':''}"
+            <input type="date" value="${prazoExibir}"
               style="border:none;background:transparent;font-size:12px;${prazoColor};cursor:pointer;width:120px"
               onchange="updateCkItem(${ref},'prazo',this.value)">
           </td>
@@ -2206,6 +2212,7 @@ function toggleCkItem(evId, ci, type, idx, val) {
   if (!ev) return;
   const target = _getCkTarget(ev, ci, type, idx);
   if (!target) return;
+  target.status = val ? 'fechado' : 'pendente';
   target.ok = val;
   saveData(events);
   const tc = document.getElementById('tab-content');

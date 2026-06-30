@@ -1362,7 +1362,7 @@ function renderOrganizacao(ev, container) {
           ${isSelMode
             ? `<button class="btn btn-outline btn-sm" onclick="cancelarSelecao()" style="font-size:11px">Cancelar</button>`
             : `<button class="btn btn-outline btn-sm" onclick="ativarSelecao('${ev.id}',${ci})" title="Agrupar itens com mesmo fornecedor" style="font-size:11px">📦 Agrupar</button>`}
-          <button class="btn btn-sm" onclick="removerCategoria('${ev.id}',${ci})" title="Remover esta categoria" style="font-size:11px;background:#fee2e2;border:1px solid #fca5a5;color:#b91c1c;padding:3px 8px">🗑️</button>
+          <button class="btn btn-sm" data-rm-cat="${ev.id}-${ci}" onclick="event.stopPropagation();removerCategoria('${ev.id}',${ci})" title="Clique para remover • Clique novamente para confirmar" style="font-size:11px;background:#fee2e2;border:1px solid #fca5a5;color:#b91c1c;padding:3px 8px">🗑️</button>
           <span class="cat-arrow" onclick="event.stopPropagation();toggleCat('${catKey}')">▼</span>
         </div>
       </div>`;
@@ -1830,10 +1830,28 @@ function removerCategoria(evId, ci) {
   if (!ev) return;
   const cat = ev.categorias[ci];
   const nome = cat.cat || cat.nome || 'esta categoria';
-  if (!confirm(`Remover a categoria "${nome}" e todos os seus itens deste evento?`)) return;
-  ev.categorias.splice(ci, 1);
-  saveData(events);
-  renderTabContent(ev);
+  // primeiro clique: marcar para confirmar
+  const btnId = 'rm-cat-' + evId + '-' + ci;
+  const btn = document.querySelector(`[data-rm-cat="${evId}-${ci}"]`);
+  if (btn && btn.dataset.confirming === '1') {
+    ev.categorias.splice(ci, 1);
+    saveData(events);
+    renderTabContent(ev);
+    toast(`🗑️ "${nome}" removida`);
+  } else if (btn) {
+    btn.dataset.confirming = '1';
+    btn.textContent = '✓ Confirmar';
+    btn.style.background = '#dc2626';
+    btn.style.color = '#fff';
+    setTimeout(() => {
+      if (btn.dataset.confirming === '1') {
+        btn.dataset.confirming = '0';
+        btn.textContent = '🗑️';
+        btn.style.background = '#fee2e2';
+        btn.style.color = '#b91c1c';
+      }
+    }, 3000);
+  }
 }
 
 function ativarSelecao(evId, ci) {

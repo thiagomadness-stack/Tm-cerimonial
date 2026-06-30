@@ -1230,8 +1230,8 @@ function showDashboard() {
       cat.items.filter(it => !it.pacoteId).forEach(it => { valor += it.valor || 0; pago += it.pago || 0; });
       (cat.pacotes || []).forEach(p => { valor += p.valor || 0; pago += p.pago || 0; });
     });
-    const checkTotal = ev.checklist.length;
-    const checkDone = ev.checklist.filter(c => c.ok).length;
+    const ckStr = calcCkCount(ev).split('/');
+    const checkDone = parseInt(ckStr[0])||0, checkTotal = parseInt(ckStr[1])||0;
     const badgeMap = { orcando: 'badge-orcando', orcado: 'badge-orcado', contrato: 'badge-contrato' };
     const badgeLabel = { orcando: 'Orçando', orcado: 'Orçado', contrato: 'Contrato' };
     const card = document.createElement('div');

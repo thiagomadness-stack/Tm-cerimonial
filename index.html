@@ -2787,6 +2787,7 @@ function renderMatrizBody() {
     <div class="mtz-actions">
       <button class="btn btn-primary" onclick="mtzSalvar()">💾 Salvar Modelo</button>
       <button class="btn" style="background:#f0ebe0;border:1px solid var(--border)" onclick="mtzAplicarExistentes()">🔄 Aplicar a Eventos Existentes do Tipo</button>
+      <button class="btn" style="background:#fee2e2;border:1px solid #fca5a5;color:#b91c1c" onclick="mtzRemoverDuplicatas()">🧹 Remover Categorias Duplicadas (Todos os Eventos)</button>
     </div>`;
 
   document.getElementById('mtz-body').innerHTML = html;
@@ -2857,6 +2858,33 @@ function mtzAddEtapa() {
 function mtzSalvar() {
   saveModelos(_mtz.data);
   toast('✅ Modelo salvo com sucesso!', 'success');
+}
+
+function mtzRemoverDuplicatas() {
+  function normCat(s) {
+    return (s||'').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}\u{2300}-\u{23FF}]/gu,'').replace(/[^\w\s]/g,'').toLowerCase().trim().replace(/\s+/g,' ');
+  }
+  let totalRemovidas = 0;
+  events.forEach(ev => {
+    const vistas = [];
+    const novas = [];
+    (ev.categorias || []).forEach(cat => {
+      const n = normCat(cat.cat || cat.nome || '');
+      if (!vistas.includes(n)) {
+        vistas.push(n);
+        novas.push(cat);
+      } else {
+        totalRemovidas++;
+      }
+    });
+    ev.categorias = novas;
+  });
+  saveData(events);
+  if (totalRemovidas > 0) {
+    toast(`🧹 ${totalRemovidas} categoria(s) duplicada(s) removida(s)!`, 'success');
+  } else {
+    toast('Nenhuma duplicata encontrada.', '');
+  }
 }
 
 function mtzAplicarExistentes() {

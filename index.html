@@ -2220,37 +2220,43 @@ function updateCheck(evId, idx, field, val) {
 }
 
 function _getCkTarget(ev, ci, type, idx) {
-  if (type === 'item') return ev.categorias[ci].items[idx];
-  if (type === 'pac')  return ev.categorias[ci].pacotes[idx];
+  try {
+    if (type === 'item') return ev.categorias[ci].items[idx];
+    if (type === 'pac')  return (ev.categorias[ci].pacotes||[])[idx];
+  } catch(e) {}
   return null;
 }
 
 function toggleCkItem(evId, ci, type, idx, val) {
-  const ev = events.find(e => e.id === evId);
-  if (!ev) return;
-  const target = _getCkTarget(ev, ci, type, idx);
-  if (!target) return;
-  target.status = val ? 'fechado' : 'pendente';
-  target.ok = val;
-  saveData(events);
-  const tc = document.getElementById('tab-content');
-  renderChecklist(ev, tc);
-  updateFinSummary(ev);
-}
-
-function updateCkItem(evId, ci, type, idx, field, val) {
-  const ev = events.find(e => e.id === evId);
-  if (!ev) return;
-  const target = _getCkTarget(ev, ci, type, idx);
-  if (!target) return;
-  target[field] = val;
-  saveData(events);
-  if (field === 'prazo') {
+  try {
+    const ev = events.find(e => e.id === evId);
+    if (!ev) { toast('Evento não encontrado','error'); return; }
+    const target = _getCkTarget(ev, ci, type, idx);
+    if (!target) { toast('Item não encontrado ci='+ci+' idx='+idx,'error'); return; }
+    target.status = val ? 'fechado' : 'pendente';
+    target.ok = val;
+    saveData(events);
     const tc = document.getElementById('tab-content');
     if (tc) renderChecklist(ev, tc);
     updateFinSummary(ev);
-    toast('📅 Prazo salvo');
-  }
+  } catch(e) { toast('Erro: '+e.message,'error'); console.error(e); }
+}
+
+function updateCkItem(evId, ci, type, idx, field, val) {
+  try {
+    const ev = events.find(e => e.id === evId);
+    if (!ev) { toast('Evento não encontrado','error'); return; }
+    const target = _getCkTarget(ev, ci, type, idx);
+    if (!target) { toast('Item não encontrado ci='+ci+' idx='+idx,'error'); return; }
+    target[field] = val;
+    saveData(events);
+    if (field === 'prazo') {
+      const tc = document.getElementById('tab-content');
+      if (tc) renderChecklist(ev, tc);
+      updateFinSummary(ev);
+      toast('📅 Prazo salvo');
+    }
+  } catch(e) { toast('Erro: '+e.message,'error'); console.error(e); }
 }
 
 function deleteChecklistItem(evId, idx) {

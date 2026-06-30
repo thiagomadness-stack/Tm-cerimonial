@@ -1330,11 +1330,29 @@ function switchTab(tab) {
   renderTabContent(ev);
 }
 
+function updateFinSummary(ev) {
+  let valor = 0, pago = 0, prev = 0;
+  ev.categorias.forEach(cat => {
+    cat.items.filter(it => !it.pacoteId).forEach(it => { valor += it.valor || 0; pago += it.pago || 0; prev += it.prev || 0; });
+    (cat.pacotes || []).forEach(p => { valor += p.valor || 0; pago += p.pago || 0; });
+  });
+  const cards = document.querySelectorAll('.fin-card');
+  if (!cards.length) return;
+  const vals = [fmtMoney(prev), fmtMoney(valor), fmtMoney(pago), fmtMoney(valor - pago)];
+  cards.forEach((card, i) => {
+    if (i < vals.length) {
+      const v = card.querySelector('.fin-value');
+      if (v) v.textContent = vals[i];
+    }
+  });
+}
+
 function renderTabContent(ev) {
   try {
     const tc = document.getElementById('tab-content');
     if (currentTab === 'organizacao') renderOrganizacao(ev, tc);
     else renderChecklist(ev, tc);
+    updateFinSummary(ev);
   } catch(e) {
     toast('Erro ao exibir evento: ' + e.message, 'error');
     console.error(e);

@@ -1561,14 +1561,15 @@ function renderChecklist(ev, container) {
     const prazoSug = calcPrazoSugerido(ev.data, catNome);
     const rows = [];
 
-    cat.items.filter(it => !it.pacoteId).forEach((it, ii) => {
+    cat.items.forEach((it, realIdx) => {
+      if (it.pacoteId) return;
       const ckDone = isCkDone(it);
       const st = ckItemStatus(ckDone, it.prazo, prazoSug, mesesRestantes, catNome);
-      rows.push({ it, ref: `'${ev.id}',${ci},'item',${ii}`, st, prazoSug, ckDone });
+      rows.push({ it, ref: `'${ev.id}',${ci},'item',${realIdx}`, st, prazoSug, ckDone });
       total++;
       if (ckDone) done++;
-      if (st === 'atrasado') atrasados.push({ it, catNome, ref: `'${ev.id}',${ci},'item',${ii}`, ckDone });
-      else if (st === 'urgente') urgentes.push({ it, catNome, ref: `'${ev.id}',${ci},'item',${ii}`, ckDone });
+      if (st === 'atrasado') atrasados.push({ it, catNome, ref: `'${ev.id}',${ci},'item',${realIdx}`, ckDone });
+      else if (st === 'urgente') urgentes.push({ it, catNome, ref: `'${ev.id}',${ci},'item',${realIdx}`, ckDone });
     });
     (cat.pacotes || []).forEach((pac, pi) => {
       const ckDone = isCkDone(pac);

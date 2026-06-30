@@ -1685,7 +1685,7 @@ function renderChecklist(ev, container) {
           <td style="width:130px;text-align:center">
             <input type="date" value="${prazoExibir}"
               style="border:none;background:transparent;font-size:12px;${prazoColor};cursor:pointer;width:120px"
-              onchange="updateCkItem(${ref},'prazo',this.value,this)">
+              onchange="updateCkItem(${ref},'prazo',this.value)">
           </td>
           <td style="width:220px"><input class="check-obs-input" value="${(it.obs||'').replace(/"/g,'&quot;')}" placeholder="Observação..." onchange="updateCkItem(${ref},'obs',this.value)"></td>
         </tr>`;
@@ -2238,17 +2238,17 @@ function toggleCkItem(evId, ci, type, idx, val) {
   updateFinSummary(ev);
 }
 
-function updateCkItem(evId, ci, type, idx, field, val, inputEl) {
+function updateCkItem(evId, ci, type, idx, field, val) {
   const ev = events.find(e => e.id === evId);
   if (!ev) return;
   const target = _getCkTarget(ev, ci, type, idx);
   if (!target) return;
   target[field] = val;
   saveData(events);
-  if (field === 'prazo' && inputEl) {
-    const atrasado = val && new Date(val) < new Date();
-    inputEl.style.color = atrasado ? 'var(--danger)' : val ? 'var(--warning)' : 'var(--muted)';
-    inputEl.style.fontWeight = atrasado ? '600' : '';
+  if (field === 'prazo') {
+    const tc = document.getElementById('tab-content');
+    if (tc) renderChecklist(ev, tc);
+    updateFinSummary(ev);
     toast('📅 Prazo salvo');
   }
 }

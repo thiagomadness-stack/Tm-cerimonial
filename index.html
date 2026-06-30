@@ -2488,12 +2488,14 @@ function printEvento(id) {
         <td>${fmtVal(pac.valor)}${pac.parc?'<br><small>'+pac.parc+'</small>':''}</td>
         <td>${fmtVal(pac.pago)}</td>
       </tr>`;
-      // Itens dentro do pacote
+      // Itens dentro do pacote — herdam status do pacote se fechado/pago
+      const stPac = (pac.status === 'fechado' || pac.status === 'pago') ? pac.status : null;
       (cat.items || []).filter(it => it.pacoteId === pac.id).forEach(it => {
         const obs2 = it.obs ? `<br><small style="color:#999">${it.obs}</small>` : '';
+        const stItem = stPac || it.status || 'pendente';
         catRows += `<tr class="pac-item-row">
           <td style="padding-left:20px">↳ ${it.nome}${obs2}</td>
-          <td class="st-${it.status||'pendente'}">${stLabel(it.status)}</td>
+          <td class="st-${stItem}">${stLabel(stItem)}</td>
           <td colspan="2" style="color:#999;font-size:9pt">incluso no pacote</td>
         </tr>`;
       });

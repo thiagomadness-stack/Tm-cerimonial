@@ -1348,7 +1348,10 @@ function showDashboard() {
   });
   sorted.forEach(ev => {
     let valor = 0, pago = 0;
-    ev.categorias.forEach(cat => { cat.items.forEach(it => { valor += it.valor || 0; pago += it.pago || 0; }); });
+    ev.categorias.forEach(cat => {
+      cat.items.filter(it => !it.pacoteId).forEach(it => { valor += it.valor || 0; pago += it.pago || 0; });
+      (cat.pacotes || []).forEach(p => { valor += p.valor || 0; pago += p.pago || 0; });
+    });
     const checkTotal = ev.checklist.length;
     const checkDone = ev.checklist.filter(c => c.ok).length;
     const badgeMap = { orcando: 'badge-orcando', orcado: 'badge-orcado', contrato: 'badge-contrato' };
@@ -1395,7 +1398,10 @@ function showEvent(id) {
 function renderEventDetail(ev) {
   const content = document.getElementById('content');
   let valor = 0, pago = 0;
-  ev.categorias.forEach(cat => { cat.items.forEach(it => { valor += it.valor || 0; pago += it.pago || 0; }); });
+  ev.categorias.forEach(cat => {
+    cat.items.filter(it => !it.pacoteId).forEach(it => { valor += it.valor || 0; pago += it.pago || 0; });
+    (cat.pacotes || []).forEach(p => { valor += p.valor || 0; pago += p.pago || 0; });
+  });
 
   const tipoClass = ev.tipo === 'casamento' ? 'casamento' : ev.tipo === 'anos15' ? 'anos15' : 'formatura';
   const statusMap = { orcando: 'Orçando', orcado: 'Orçado', contrato: 'Contrato' };

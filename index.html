@@ -1737,8 +1737,22 @@ const ETAPA_PRAZOS = {
   '💰 Etapa 9 – Planejamento Financeiro':{ min: 12, max: 18 },
 };
 
+function _normEtapa(s) {
+  return (s||'').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}\u{2300}-\u{23FF}\u{FE00}-\u{FE0F}]/gu,'').toLowerCase().trim().replace(/\s+/g,' ');
+}
+let _etapaPrazosNorm = null;
+function _getEtapaPrazo(etapa) {
+  if (ETAPA_PRAZOS[etapa]) return ETAPA_PRAZOS[etapa];
+  if (!_etapaPrazosNorm) {
+    _etapaPrazosNorm = {};
+    for (const [k,v] of Object.entries(ETAPA_PRAZOS)) _etapaPrazosNorm[_normEtapa(k)] = v;
+  }
+  return _etapaPrazosNorm[_normEtapa(etapa)] || null;
+}
+
 function getEtapaMaxMeses(etapa) {
-  if (ETAPA_PRAZOS[etapa]) return ETAPA_PRAZOS[etapa].max;
+  const p = _getEtapaPrazo(etapa);
+  if (p) return p.max;
   const m = etapa.match(/(\d+)[–-](\d+)\s+meses/);
   if (m) return parseInt(m[2]);
   const s = etapa.match(/(\d+)[–-](\d+)\s+semanas/);
@@ -1746,7 +1760,8 @@ function getEtapaMaxMeses(etapa) {
   return 0;
 }
 function getEtapaMinMeses(etapa) {
-  if (ETAPA_PRAZOS[etapa]) return ETAPA_PRAZOS[etapa].min;
+  const p = _getEtapaPrazo(etapa);
+  if (p) return p.min;
   const m = etapa.match(/(\d+)[–-](\d+)\s+meses/);
   if (m) return parseInt(m[1]);
   const s = etapa.match(/(\d+)[–-](\d+)\s+semanas/);
@@ -1759,9 +1774,11 @@ function getMesesAteEvento(dataEvento) {
   return diff / (1000 * 60 * 60 * 24 * 30.44);
 }
 function calcPrazoSugerido(dataEvento, etapa) {
-  if (!dataEvento || !ETAPA_PRAZOS[etapa]) return '';
+  if (!dataEvento) return '';
+  const p = _getEtapaPrazo(etapa);
+  if (!p) return '';
   const d = new Date(dataEvento);
-  d.setMonth(d.getMonth() - ETAPA_PRAZOS[etapa].min);
+  d.setMonth(d.getMonth() - p.min);
   return d.toISOString().slice(0, 10);
 }
 

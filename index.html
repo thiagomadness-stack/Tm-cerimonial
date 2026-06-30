@@ -1670,6 +1670,7 @@ function renderChecklist(ev, container) {
 // Se restarem menos que "min" meses e o item não estiver feito → ATRASADO
 // Se restarem entre "min" e "max" → URGENTE
 const ETAPA_PRAZOS = {
+  // Organização Geral
   '⚙️ Geral':                           { min: 12, max: 18 },
   '🏛️ Local da Recepção e Festa':        { min: 12, max: 18 },
   '⛪ Local da Celebração':              { min: 12, max: 18 },
@@ -1684,6 +1685,24 @@ const ETAPA_PRAZOS = {
   '🤵 Para o Noivo':                     { min: 3,  max: 6  },
   '💍 Para os Noivos':                   { min: 3,  max: 6  },
   '✨ Extras':                           { min: 1,  max: 3  },
+  // Checklist – Casamento
+  '💒 Etapa 1 – Cerimonial':            { min: 12, max: 18 },
+  '🏛️ Etapa 2 – Estrutura':             { min: 12, max: 18 },
+  '👰 Etapa 3 – Celebração':            { min: 12, max: 18 },
+  '🎨 Etapa 4 – Decoração':             { min: 6,  max: 12 },
+  '🍽️ Etapa 5 – Gastronomia':           { min: 6,  max: 12 },
+  '🔊 Etapa 6 – Som e Luz':             { min: 6,  max: 12 },
+  '📸 Etapa 7 – Registros':             { min: 9,  max: 15 },
+  // Checklist – 15 Anos / Formatura
+  '📌 Etapa 1 – Estrutura Básica':      { min: 12, max: 18 },
+  '🕰️ Etapa 1 – Estrutura Básica':      { min: 12, max: 18 },
+  '🍽️ Etapa 2 – Gastronomia e Bebidas': { min: 6,  max: 12 },
+  '💌 Etapa 3 – Convites e Comunicação':{ min: 4,  max: 9  },
+  '🕰️ Etapa 4 – Cerimonial e Roteiro':  { min: 3,  max: 6  },
+  '🎨 Etapa 5 – Decoração e Cenário':   { min: 6,  max: 12 },
+  '🔊 Etapa 6 – Som, Luz e Música':     { min: 6,  max: 12 },
+  '🛠️ Etapa 8 – Serviços de Apoio':     { min: 2,  max: 6  },
+  '💰 Etapa 9 – Planejamento Financeiro':{ min: 12, max: 18 },
 };
 
 function getEtapaMaxMeses(etapa) {

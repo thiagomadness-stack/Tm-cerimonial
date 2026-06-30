@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -280,6 +280,28 @@
   .fin-card.prev { border-top: 3px solid #16a34a; }
   .fin-card.prev .fin-value { color: #16a34a; }
 
+  /* MATRIZ */
+  .matriz-tabs { display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap; }
+  .matriz-tab { padding:8px 18px; border-radius:20px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:13px; font-weight:500; transition:all 0.15s; }
+  .matriz-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .matriz-section { margin-bottom:22px; }
+  .matriz-section-title { font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .matriz-grupo { border:1px solid var(--border); border-radius:8px; margin-bottom:10px; overflow:hidden; }
+  .matriz-grupo-header { display:flex; align-items:center; gap:8px; padding:9px 12px; background:var(--cat-bg); border-bottom:1px solid var(--border); }
+  .matriz-grupo-header input { flex:1; border:none; background:transparent; font-size:13px; font-weight:600; color:var(--text); outline:none; }
+  .matriz-grupo-items { padding:8px 12px; }
+  .matriz-item-row { display:flex; align-items:center; gap:6px; padding:4px 0; border-bottom:1px solid #f0f0f0; }
+  .matriz-item-row:last-child { border-bottom:none; }
+  .matriz-item-row input { flex:1; border:none; background:transparent; font-size:13px; color:var(--text); outline:none; padding:2px 4px; }
+  .matriz-item-row input:focus { background:#f9f7f2; border-radius:4px; }
+  .mtz-rm { background:none; border:none; color:#ccc; cursor:pointer; font-size:14px; padding:2px 4px; border-radius:3px; line-height:1; }
+  .mtz-rm:hover { color:var(--danger); background:#fee; }
+  .mtz-add-item { background:none; border:1px dashed #ccc; color:var(--muted); border-radius:5px; padding:4px 10px; font-size:12px; cursor:pointer; width:100%; margin-top:6px; }
+  .mtz-add-item:hover { border-color:var(--accent); color:var(--accent); }
+  .mtz-add-grupo { background:none; border:1px dashed #ccc; color:var(--muted); border-radius:6px; padding:8px; font-size:13px; cursor:pointer; width:100%; margin-top:4px; }
+  .mtz-add-grupo:hover { border-color:var(--accent); color:var(--accent); }
+  .mtz-actions { display:flex; gap:10px; padding:16px 0 0; flex-wrap:wrap; }
+
   /* ANEXOS */
   .anexo-btn { background: none; border: 1px solid var(--border); border-radius: 5px; padding: 2px 6px; cursor: pointer; font-size: 11px; color: var(--muted); vertical-align: middle; }
   .anexo-btn:hover { background: var(--surface-alt); }
@@ -439,6 +461,9 @@
     <div class="menu-item" onclick="showLocais()" id="menu-locais">
       <span class="icon">🏛️</span> Locais
     </div>
+    <div class="menu-item" onclick="showMatriz()" id="menu-matriz">
+      <span class="icon">📋</span> Matriz de Modelos
+    </div>
     <div class="menu-label" style="margin-top:10px">Meus Eventos</div>
     <div id="event-list"></div>
   </div>
@@ -478,393 +503,246 @@ const TIPOS = { casamento: 'Casamento', anos15: '15 Anos', formatura: 'Formatura
 const TIPO_ICONS = { casamento: '💒', anos15: '🌸', formatura: '🎓' };
 
 function getTemplateItems(tipo) {
-  const common_bebidas = [
-    { nome: 'Bebidas da festa', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Copos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Copeiros e lavagê', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Garçons para bebidas', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Gelo', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Rolhas', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Bartenders', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Bartenders extras e quebras', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+  try {
+    const saved = JSON.parse(localStorage.getItem('tm_modelos') || 'null');
+    if (saved && saved[tipo] && saved[tipo].cats && saved[tipo].cats.length > 0) {
+      return JSON.parse(JSON.stringify(saved[tipo].cats));
+    }
+  } catch {}
+
+  function itm(nome) { return { nome, status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' }; }
+
+  const gastro = [
+    itm('Entradas (coquetel receptivo)'), itm('Mesa de antepastos'), itm('Buffet'),
+    itm('Sobremesas'), itm('Lanches da madrugada'), itm('Garçons para Buffet'),
+    itm('Pratos e talheres'), itm('Copos quebrados'), itm('Alimentação para Staff'),
+    itm('Doces'), itm('Forminhas de doces'),
   ];
-  const common_gastro = [
-    { nome: 'Entradas (coquetel receptivo)', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Mesa de antepastos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Buffet', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Sobremesas', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Lanches da madrugada', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Garçons para Buffet', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Pratos e talheres', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Copos quebrados', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Alimentação para Staff', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Doces', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Forminhas de doces', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+  const bebidas = [
+    itm('Bebidas da festa'), itm('Copos'), itm('Copeiros e lavagê'),
+    itm('Garçons para bebidas'), itm('Gelo'), itm('Rolhas'),
+    itm('Bartenders'), itm('Bartenders extras e quebras'),
   ];
-  const common_local = [
-    { nome: 'Locação do espaço', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Gerador', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Banheiros', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Ar condicionado', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Cozinha', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Locação da Cozinha', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Horas Extras Local', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Atendentes de banheiro', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Estacionamento', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Seguranças', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Limpeza no dia da festa', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+  const som_cas = [
+    itm('Sonorização Igreja'), itm('Sonorização festa e ambientes'), itm('Equipamento de DJ'),
+    itm('Raider Técnico'), itm('Telão de led'), itm('Iluminação Cênica ambiente'),
+    itm('Iluminação TX'), itm('Iluminação de pista e Box Tru'), itm('Pista de leds'),
   ];
-  const common_foto = [
-    { nome: 'Fotógrafo dia do evento', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Ensaio', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Álbum', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Filmagem', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Same Day Edit', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+  const som_15 = [
+    itm('Sonorização festa e ambientes'), itm('Equipamento de DJ'), itm('Raider Técnico'),
+    itm('Telão de led'), itm('Iluminação Cênica ambiente'), itm('Iluminação TX'),
+    itm('Iluminação de pista e Box Tru'), itm('Pista de leds'),
   ];
-  const common_som = [
-    { nome: 'Sonorização festa e ambientes', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Equipamento de DJ', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Rider Técnico', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Telão de LED', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Iluminação Cênica ambiente', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Iluminação TX', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Iluminação de pista e Box Tru', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Pista de leds', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+  const som_form = [
+    itm('Sonorização'), itm('Equipamento de DJ'), itm('Raider Técnico'),
+    itm('Telão de led'), itm('Iluminação Cênica'), itm('Iluminação TX'), itm('Pista de leds'),
   ];
-  const common_musical = [
-    { nome: 'Música Receptivo festa', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'DJ', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Hotel DJ', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'VJ', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Hotel VJ', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Atrações', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Hotel atrações', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Banda', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Hotel banda', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+  const musical_cas = [
+    itm('Musica para a Cerimonia'), itm('Musica Receptivo festa'), itm('DJ'), itm('Hotel DJ'),
+    itm('VJ'), itm('Hotel VJ'), itm('Atrações'), itm('Hotel atrações'), itm('Banda'), itm('Hotel banda'),
   ];
-  const common_extras = [
-    { nome: 'Recreação', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Van para transporte', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Lembrancinhas', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    { nome: 'Chinelinhos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+  const musical_15 = [
+    itm('Musica Receptivo festa'), itm('DJ'), itm('Hotel DJ'),
+    itm('VJ'), itm('Hotel VJ'), itm('Atrações'), itm('Hotel atrações'), itm('Banda'), itm('Hotel banda'),
+  ];
+  const foto_cas = [
+    itm('Fotógrafo dia do casamento'), itm('Ensaio pré Wedding'), itm('Álbum'),
+    itm('Filmagem'), itm('Clipe ensaio Pré wedding'), itm('Same Day Edit'),
+  ];
+  const foto_15 = [
+    itm('Fotógrafo dia do evento'), itm('Ensaio'), itm('Álbum'),
+    itm('Filmagem'), itm('Same Day Edit'),
+  ];
+  const foto_form = [
+    itm('Fotógrafo'), itm('Ensaio'), itm('Álbum'), itm('Clipe ensaio'), itm('Filmagem'),
+  ];
+  const extras_cas = [
+    itm('Recreação'), itm('Van para transporte'), itm('Lembrancinhas'), itm('Chinelinhos'),
+    itm('Carro (aluguel) para noivos'), itm('Motorista noivos'),
+  ];
+  const extras_15 = [
+    itm('Recreação'), itm('Van para transporte'), itm('Lembrancinhas'), itm('Chinelinhos'),
   ];
 
   if (tipo === 'casamento') return [
-    { cat: '⚙️ Geral', items: [
-      { nome: 'Cerimonial', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Lista de convidados', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+    { cat: 'Geral', items: [itm('Cerimonial'), itm('Lista de convidados')] },
+    { cat: 'Local da Recepção e Festa', items: [
+      itm('Locação do espaço'), itm('Gerador'), itm('Banheiros'), itm('Ar condicionado'),
+      itm('Cozinha'), itm('Locação da Cozinha'), itm('Horas Extras Local'),
+      itm('Atendentes de banheiro'), itm('Estacionamento'), itm('Camarim Noivos'),
+      itm('Seguranças'), itm('Limpeza no dia da festa'),
     ]},
-    { cat: '🏛️ Local da Recepção e Festa', items: [...common_local, { nome: 'Camarim Noivos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' }] },
-    { cat: '⛪ Local da Celebração', items: [
-      { nome: 'Locação do espaço (cerimônia)', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Padre / Celebrante', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Curso de noivos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Documentação necessária', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Ar condicionado (cerimônia)', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+    { cat: 'Local da Celebração', items: [
+      itm('Locação do espaço'), itm('Padre'), itm('Curso noivos'),
+      itm('Documentação necessária'), itm('Ar condicionado'),
     ]},
-    { cat: '🍽️ Gastronomia', items: common_gastro },
-    { cat: '🍷 Bebidas', items: common_bebidas },
-    { cat: '💌 Papelaria', items: [
-      { nome: 'Site', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Save the Date', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Arte convite e Monograma', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Convite digital', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Convites físicos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Caligrafa', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Caixa padrinhos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Card para caixa dos padrinhos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Caixa padrinhos (itens)', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Gravatas', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Caixa mães, pais, damas e pajens', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Menu para as mesas', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Caixa banheiros', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Lágrimas de Alegria', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Tag Bem casados', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+    { cat: 'Gastronomia', items: gastro },
+    { cat: 'Bebidas', items: bebidas },
+    { cat: 'Papelaria', items: [
+      itm('Site'), itm('Save the Date'), itm('Arte convite e Monograma'),
+      itm('Convite digital'), itm('Convites físicos'), itm('Caligrafa'),
+      itm('Caixa padrinhos'), itm('Card para caixa dos padrinhos'), itm('Caixa padrinhos (itens)'),
+      itm('Gravatas'), itm('Bebida (caixa padrinhos)'), itm('Extras caixa padrinhos'),
+      itm('Caixa mães, pais, damas e pajens'), itm('Menu para as mesas'),
+      itm('Caixa banheiros'), itm('Lágrimas de Alegria'), itm('Tag Bem casados'),
     ]},
-    { cat: '🌸 Decoração', items: [
-      { nome: 'Decoração', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Decoração cerimônia', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Cadeiras', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Bolo de casamento', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Montagem dos doces na mesa e caixas', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Adesivo', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Arroz, pétalas, balões...', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Buquê da noiva', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Buquês das madrinhas', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Buquês das daminha', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Boutonnières', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Buquê de jogar', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+    { cat: 'Decoração', items: [
+      itm('Decoração recepção'), itm('Decoração cerimônia'), itm('Cadeiras'),
+      itm('Bolo de casamento'), itm('Montagem dos Doces na mesa e caixas'), itm('Adesivo'),
+      itm('Arroz, pétalas, balões'), itm('Buquê da noiva'), itm('Buquês das madrinhas'),
+      itm('Buquês das daminhas'), itm('Boutoniers'), itm('Buquê de jogar'), itm('Noivo jogar?'),
     ]},
-    { cat: '🎚️ Sonorização, Iluminação e Telões', items: [...common_som, { nome: 'Sonorização Igreja', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' }] },
-    { cat: '🎵 Atrações Musicais', items: [...common_musical, { nome: 'Música para a Cerimônia', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' }] },
-    { cat: '📸 Fotografia e Filmagem', items: [...common_foto, { nome: 'Ensaio pré-Wedding', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' }, { nome: 'Clipe ensaio pré-wedding', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' }] },
-    { cat: '✨ Extras', items: [...common_extras, { nome: 'Carro (aluguel) para noivos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' }, { nome: 'Motorista noivos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' }] },
-    { cat: '👗 Para a Noiva', items: [
-      { nome: 'Salão de Beleza – Dia da noiva', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Maquiagem prova', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Cabelo prova', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Joias/acessórios', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Roupas íntimas', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Vestido', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Véu/Tiara', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Sapatos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+    { cat: 'Sonorização, Iluminação e Telões', items: som_cas },
+    { cat: 'Atrações Musicais', items: musical_cas },
+    { cat: 'Fotografia e Filmagem', items: foto_cas },
+    { cat: 'Extras', items: extras_cas },
+    { cat: 'Para a Noiva', items: [
+      itm('Salão de Beleza'), itm('Dia da noiva'), itm('Maquiagem prova'), itm('Cabelo prova'),
+      itm('Jóias/acessórios'), itm('Roupas íntimas'), itm('Vestido – Escolha'),
+      itm('Vestido – Provas'), itm('Vestido – Alterações'), itm('Véu/Tiara'),
+      itm('Sapatos – Provas'), itm('Sapatos – Alterações'),
     ]},
-    { cat: '🤵 Para o Noivo', items: [
-      { nome: 'Sapato do noivo', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Terno', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+    { cat: 'Para o Noivo', items: [
+      itm('Sapato do noivo'), itm('Terno – Escolha'), itm('Terno – Provas'), itm('Terno – Alterações'),
     ]},
-    { cat: '💍 Para os Noivos', items: [
-      { nome: 'Casamento civil', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Alianças', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    ]},
+    { cat: 'Para os Noivos', items: [itm('Casamento civil'), itm('Alianças')] },
   ];
 
   if (tipo === 'anos15') return [
-    { cat: '⚙️ Geral', items: [
-      { nome: 'Cerimonial', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Lista de convidados', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+    { cat: 'Geral', items: [itm('Cerimonial'), itm('Lista de convidados')] },
+    { cat: 'Local da Recepção e Festa', items: [
+      itm('Locação do espaço'), itm('Gerador'), itm('Banheiros'), itm('Ar condicionado'),
+      itm('Cozinha'), itm('Locação da Cozinha'), itm('Horas Extras Local'),
+      itm('Atendentes de banheiro'), itm('Estacionamento'), itm('Camarim'),
+      itm('Seguranças'), itm('Limpeza no dia da festa'),
     ]},
-    { cat: '🏛️ Local da Recepção e Festa', items: [...common_local, { nome: 'Camarim', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' }] },
-    { cat: '🍽️ Gastronomia', items: common_gastro },
-    { cat: '🍷 Bebidas', items: common_bebidas },
-    { cat: '💌 Papelaria', items: [
-      { nome: 'Site', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Save the Date', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Arte convite e Monograma', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Convite digital', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Convites físicos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Caligrafa', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Menu para as mesas', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Caixa banheiros', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+    { cat: 'Gastronomia', items: gastro },
+    { cat: 'Bebidas', items: bebidas },
+    { cat: 'Papelaria', items: [
+      itm('Site'), itm('Save the Date'), itm('Arte convite e Monograma'),
+      itm('Convite digital'), itm('Convites físicos'), itm('Caligrafa'),
+      itm('Menu para as mesas'), itm('Caixa banheiros'),
     ]},
-    { cat: '🌸 Decoração', items: [
-      { nome: 'Decoração', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Cadeiras', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Bolo de 15 anos (mesa e vela)', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Adesivo', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+    { cat: 'Decoração', items: [
+      itm('Decoração'), itm('Cadeiras'), itm('Bolo de 15 anos (Mesa e vela)'), itm('Adesivo'),
     ]},
-    { cat: '🎚️ Sonorização, Iluminação e Telões', items: common_som },
-    { cat: '🎵 Atrações Musicais', items: common_musical },
-    { cat: '📸 Fotografia e Filmagem', items: common_foto },
-    { cat: '✨ Extras', items: common_extras },
-    { cat: '👗 Para a Debutante', items: [
-      { nome: 'Salão de Beleza – Dia da debutante', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Maquiagem prova', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Cabelo prova', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Joias/acessórios', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Roupas íntimas', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Vestido', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Sapatos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+    { cat: 'Sonorização, Iluminação e Telões', items: som_15 },
+    { cat: 'Atrações Musicais', items: musical_15 },
+    { cat: 'Fotografia e Filmagem', items: foto_15 },
+    { cat: 'Extras', items: extras_15 },
+    { cat: 'Para a Debutante', items: [
+      itm('Salão de Beleza'), itm('Dia da debutante'), itm('Maquiagem prova'), itm('Cabelo prova'),
+      itm('Jóias/acessórios'), itm('Roupas íntimas'), itm('Vestido – Escolha'),
+      itm('Vestido – Provas'), itm('Vestido – Alterações'),
+      itm('Sapatos – Provas'), itm('Sapatos – Alterações'),
     ]},
   ];
 
   // formatura
   return [
-    { cat: '⚙️ Geral', items: [
-      { nome: 'Cerimonial', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Lista de Convidados', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+    { cat: 'Geral', items: [itm('Cerimonial'), itm('Lista de Convidados')] },
+    { cat: 'Papelaria', items: [
+      itm('Site'), itm('Save the Date'), itm('Arte convite e digital'),
+      itm('Convites físicos'), itm('Caligrafa'), itm('Menu para as mesas'), itm('Caixa banheiros'),
     ]},
-    { cat: '💌 Papelaria', items: [
-      { nome: 'Site', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Save the Date', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Arte convite e digital', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Convites físicos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Caligrafa', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Menu para as mesas', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Caixa banheiros', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+    { cat: 'Por Conta do Formando', items: [itm('Vestido ou terno'), itm('Salão de beleza')] },
+    { cat: 'Decoração', items: [itm('Decoração'), itm('Cadeiras'), itm('Adesivo')] },
+    { cat: 'Local da Recepção e Festa', items: [
+      itm('Locação do espaço'), itm('Horas Extras Local'), itm('Atendentes de banheiro'),
+      itm('Estacionamento'), itm('Camarim'), itm('Seguranças'), itm('Limpeza no dia da festa'),
     ]},
-    { cat: '🧑‍🎓 Por conta do formando', items: [
-      { nome: 'Vestido ou terno', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Salão de beleza', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
+    { cat: 'Gastronomia', items: [
+      itm('Entradas'), itm('Mesa de antepastos'), itm('Buffet'), itm('Sobremesas'),
+      itm('Garçons para Buffet'), itm('Pratos e talheres'), itm('Lanches da madrugada'),
+      itm('Copos quebrados'), itm('Doces'), itm('Forminhas de doces'),
     ]},
-    { cat: '🌸 Decoração', items: [
-      { nome: 'Decoração', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Cadeiras', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Adesivo', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    ]},
-    { cat: '🏛️ Local da Recepção e Festa', items: [
-      { nome: 'Locação do espaço', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Horas Extras Local', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Atendentes de banheiro', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Estacionamento', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Camarim', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Seguranças', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Limpeza no dia da festa', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    ]},
-    { cat: '🍽️ Gastronomia', items: [
-      { nome: 'Entradas', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Mesa de antepastos', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Buffet', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Sobremesas', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Garçons para Buffet', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Pratos e talheres', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Lanches da madrugada', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Copos quebrados', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Doces', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-      { nome: 'Forminhas de doces', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' },
-    ]},
-    { cat: '🍷 Bebidas', items: common_bebidas },
-    { cat: '🎚️ Sonorização, Iluminação e Telões', items: common_som },
-    { cat: '🎵 Atrações Musicais', items: common_musical },
-    { cat: '📸 Fotografia e Filmagem', items: common_foto },
-    { cat: '✨ Extras', items: common_extras },
+    { cat: 'Bebidas', items: bebidas },
+    { cat: 'Sonorização e Telões', items: som_form },
+    { cat: 'Atrações Musicais', items: musical_15 },
+    { cat: 'Fotografia e Filmagem', items: foto_form },
+    { cat: 'Extras', items: extras_15 },
   ];
 }
 
 function getChecklistTemplate(tipo) {
-  const common = [
-    { etapa: '🍽️ Gastronomia e Bebidas', item: 'Buffet', acao: 'Degustação + fechamento do cardápio', ok: false, obs: '' },
-    { etapa: '🍽️ Gastronomia e Bebidas', item: 'Doces', acao: 'Escolher estilos, sabores e quantidade', ok: false, obs: '' },
-    { etapa: '🍽️ Gastronomia e Bebidas', item: 'Bebidas', acao: 'Calcular por tipo (cerveja, refri, água, etc.)', ok: false, obs: '' },
-    { etapa: '🍽️ Gastronomia e Bebidas', item: 'Gelo e copos', acao: 'Estimar consumo e contratar fornecedor', ok: false, obs: '' },
-    { etapa: '🍽️ Gastronomia e Bebidas', item: 'Bartenders e garçons', acao: 'Definir quantidade e contratar equipe', ok: false, obs: '' },
-    { etapa: '🎨 Decoração e Cenário', item: 'Estilo decorativo', acao: 'Definir paleta, mood e briefing com decorador', ok: false, obs: '' },
-    { etapa: '🎨 Decoração e Cenário', item: 'Flores e móveis', acao: 'Escolher em conjunto com fornecedor', ok: false, obs: '' },
-    { etapa: '🎨 Decoração e Cenário', item: 'Lounge, mesas, pista', acao: 'Planejar disposição do mobiliário', ok: false, obs: '' },
-    { etapa: '🔊 Som, Luz e Música', item: 'DJ ou banda', acao: 'Escolher estilo musical e contratar', ok: false, obs: '' },
-    { etapa: '🔊 Som, Luz e Música', item: 'Som e iluminação', acao: 'Confirmar rider técnico com espaço', ok: false, obs: '' },
-    { etapa: '🔊 Som, Luz e Música', item: 'Telões e estrutura', acao: 'Definir se haverá projeção e onde', ok: false, obs: '' },
-    { etapa: '📸 Registros', item: 'Fotografia', acao: 'Fechar ensaio + cobertura do evento', ok: false, obs: '' },
-    { etapa: '📸 Registros', item: 'Filmagem', acao: 'Definir roteiro do teaser e do vídeo final', ok: false, obs: '' },
-    { etapa: '📸 Registros', item: 'Painel de fotos', acao: 'Criar espaço para registros com convidados', ok: false, obs: '' },
-    { etapa: '🛠️ Serviços de Apoio', item: 'Limpeza e seguranças', acao: 'Contratar conforme porte da festa', ok: false, obs: '' },
-    { etapa: '🛠️ Serviços de Apoio', item: 'Banheiro decorado', acao: 'Criar kit personalizado para convidados', ok: false, obs: '' },
-    { etapa: '🛠️ Serviços de Apoio', item: 'Seguro ou alvará', acao: 'Verificar com o local e prefeitura', ok: false, obs: '' },
-    { etapa: '💰 Planejamento Financeiro', item: 'Definir orçamento total', acao: 'Separar por categorias (buffet, som, etc.)', ok: false, obs: '' },
-    { etapa: '💰 Planejamento Financeiro', item: 'Controle de gastos', acao: 'Usar planilha e acompanhar semanalmente', ok: false, obs: '' },
-    { etapa: '💰 Planejamento Financeiro', item: 'Pagamento de fornecedores', acao: 'Planejar entradas, parcelas e vencimentos', ok: false, obs: '' },
-  ];
+  try {
+    const saved = JSON.parse(localStorage.getItem('tm_modelos') || 'null');
+    if (saved && saved[tipo] && saved[tipo].checklist && saved[tipo].checklist.length > 0) {
+      return JSON.parse(JSON.stringify(saved[tipo].checklist));
+    }
+  } catch {}
+
+  function ci(etapa, item, acao) { return { etapa, item, acao: acao||'', ok: false, obs: '' }; }
 
   if (tipo === 'casamento') return [
-    { etapa: '💒 Cerimonial', item: 'Lista de convidados', acao: 'Definir lista por núcleos familiares', ok: false, obs: '' },
-    { etapa: '💒 Cerimonial', item: 'Cerimonial', acao: 'Contratar equipe e alinhar cronograma', ok: false, obs: '' },
-    { etapa: '🏛️ Estrutura', item: 'Local da recepção', acao: 'Visitar, reservar e verificar regras', ok: false, obs: '' },
-    { etapa: '🏛️ Estrutura', item: 'Gerador', acao: 'Verificar necessidade e contratar', ok: false, obs: '' },
-    { etapa: '🏛️ Estrutura', item: 'Banheiros', acao: 'Checar estrutura existente ou alugar', ok: false, obs: '' },
-    { etapa: '🏛️ Estrutura', item: 'Ar-condicionado', acao: 'Confirmar com o local ou contratar', ok: false, obs: '' },
-    { etapa: '🏛️ Estrutura', item: 'Limpeza', acao: 'Definir equipe para antes e depois da festa', ok: false, obs: '' },
-    { etapa: '👰 Celebração', item: 'Local da cerimônia', acao: 'Reservar igreja ou espaço alternativo', ok: false, obs: '' },
-    { etapa: '👰 Celebração', item: 'Celebrante', acao: 'Confirmar padre, pastor ou celebrante civil', ok: false, obs: '' },
-    { etapa: '👰 Celebração', item: 'Música cerimônia', acao: 'Definir repertório e músicos', ok: false, obs: '' },
-    ...common,
+    ci('💒 Etapa 1 – Cerimonial', 'Lista de convidados', 'Definir lista por núcleos familiares'),
+    ci('💒 Etapa 1 – Cerimonial', 'Cerimonial', 'Contratar equipe e alinhar cronograma'),
+    ci('🏛️ Etapa 2 – Estrutura', 'Local da recepção', 'Visitar, reservar e verificar regras'),
+    ci('🏛️ Etapa 2 – Estrutura', 'Locação do espaço', 'Conferir mobiliário incluso e horários'),
+    ci('🏛️ Etapa 2 – Estrutura', 'Gerador', 'Verificar necessidade e contratar'),
+    ci('🏛️ Etapa 2 – Estrutura', 'Banheiros', 'Checar estrutura existente ou alugar'),
+    ci('🏛️ Etapa 2 – Estrutura', 'Ar-condicionado', 'Confirmar com o local ou contratar'),
+    ci('🏛️ Etapa 2 – Estrutura', 'Cozinha', 'Verificar uso permitido com o buffet'),
+    ci('🏛️ Etapa 2 – Estrutura', 'Horas extras', 'Prever valores e limites de horário'),
+    ci('🏛️ Etapa 2 – Estrutura', 'Limpeza', 'Definir equipe para antes e depois da festa'),
+    ci('👰 Etapa 3 – Celebração', 'Local da cerimônia', 'Reservar igreja ou espaço alternativo'),
+    ci('👰 Etapa 3 – Celebração', 'Celebrante / Padre', 'Confirmar padre, pastor ou celebrante civil'),
+    ci('👰 Etapa 3 – Celebração', 'Música cerimônia', 'Definir repertório e músicos'),
+    ci('🎨 Etapa 4 – Decoração', 'Flores e decoração', 'Escolher paleta e briefing com decorador'),
+    ci('🎨 Etapa 4 – Decoração', 'Mobiliário', 'Alinhar lounge, mesas e pista'),
+    ci('🍽️ Etapa 5 – Gastronomia', 'Buffet', 'Escolher cardápio e realizar degustação'),
+    ci('🍽️ Etapa 5 – Gastronomia', 'Bolo e doces', 'Definir quantidade e estilo'),
+    ci('🔊 Etapa 6 – Som e Luz', 'DJ / Banda', 'Escolher perfil musical e contratar'),
+    ci('🔊 Etapa 6 – Som e Luz', 'Iluminação', 'Verificar rider técnico e estrutura'),
+    ci('📸 Etapa 7 – Registros', 'Fotografia', 'Fechar cobertura + ensaio externo'),
+    ci('📸 Etapa 7 – Registros', 'Filmagem', 'Roteiro do teaser e vídeo final'),
   ];
 
-  if (tipo === 'anos15') return [
-    // ── 12–18 meses antes ──────────────────────────────────
-    { etapa: '📅 12–18 meses antes', item: 'Definir orçamento total', acao: 'Separar por categorias: local, buffet, foto, decoração, som, look...', ok: false, obs: '' },
-    { etapa: '📅 12–18 meses antes', item: 'Lista de convidados – principal', acao: 'Definir lista de adultos e crianças; estimar total de pessoas', ok: false, obs: '' },
-    { etapa: '📅 12–18 meses antes', item: 'Escolha e locação do espaço', acao: 'Visitar locais, comparar e assinar contrato com reserva da data', ok: false, obs: '' },
-    { etapa: '📅 12–18 meses antes', item: 'Contratar Cerimonialista', acao: 'Alinhar serviços, cronograma e saldo cerimonial', ok: false, obs: '' },
-    { etapa: '📅 12–18 meses antes', item: 'Infraestrutura do local', acao: 'Confirmar banheiros, energia, estacionamento e capacidade', ok: false, obs: '' },
-    // ── 10–12 meses antes ──────────────────────────────────
-    { etapa: '📅 10–12 meses antes', item: 'Fotógrafo – fechar contrato', acao: 'Pesquisar portfólios, reunião e assinar contrato', ok: false, obs: '' },
-    { etapa: '📅 10–12 meses antes', item: 'Álbum fotográfico', acao: 'Escolher estilo e tamanho; incluir no pacote do fotógrafo', ok: false, obs: '' },
-    { etapa: '📅 10–12 meses antes', item: 'Filmagem – fechar contrato', acao: 'Contratar videomaker e definir roteiro do vídeo final', ok: false, obs: '' },
-    { etapa: '📅 10–12 meses antes', item: 'DJ – fechar contrato', acao: 'Pesquisar DJs, ouvir sets e fechar contrato', ok: false, obs: '' },
-    { etapa: '📅 10–12 meses antes', item: 'Buffet – degustação e fechamento', acao: 'Agendar degustação e fechar cardápio completo com valor por pessoa', ok: false, obs: '' },
-    { etapa: '📅 10–12 meses antes', item: 'Decoração – briefing com decorador', acao: 'Definir paleta de cores, mood board e estilo decorativo', ok: false, obs: '' },
-    // ── 8–10 meses antes ───────────────────────────────────
-    { etapa: '📅 8–10 meses antes', item: 'Save the Date', acao: 'Enviar digitalmente com data, local e tema para todos os convidados', ok: false, obs: '' },
-    { etapa: '📅 8–10 meses antes', item: 'Vestido – pesquisa e escolha', acao: 'Visitar ateliês e lojas, definir modelo e cor; iniciar confecção', ok: false, obs: '' },
-    { etapa: '📅 8–10 meses antes', item: 'Salão de Beleza – reservar horário', acao: 'Reservar salão para maquiagem e cabelo no dia do evento', ok: false, obs: '' },
-    // ── 6–8 meses antes ────────────────────────────────────
-    { etapa: '📅 6–8 meses antes', item: 'Arte convite e Monograma', acao: 'Contratar designer para criar identidade visual da festa', ok: false, obs: '' },
-    { etapa: '📅 6–8 meses antes', item: 'Site / Papelaria digital', acao: 'Criar site ou página com informações e RSVP online', ok: false, obs: '' },
-    { etapa: '📅 6–8 meses antes', item: 'Banda / Atrações musicais', acao: 'Contratar banda ou atração ao vivo se desejar', ok: false, obs: '' },
-    { etapa: '📅 6–8 meses antes', item: 'Hotel DJ', acao: 'Reservar hospedagem para o DJ se for de outra cidade', ok: false, obs: '' },
-    { etapa: '📅 6–8 meses antes', item: 'Hotel banda', acao: 'Reservar hospedagem para a banda se for de outra cidade', ok: false, obs: '' },
-    { etapa: '📅 6–8 meses antes', item: 'VJ', acao: 'Contratar VJ se houver telão e projeção de conteúdo', ok: false, obs: '' },
-    { etapa: '📅 6–8 meses antes', item: 'Hotel VJ', acao: 'Reservar hospedagem para o VJ se necessário', ok: false, obs: '' },
-    { etapa: '📅 6–8 meses antes', item: 'Atrações – contratar', acao: 'Definir e contratar atrações especiais (show, mágico, etc.)', ok: false, obs: '' },
-    { etapa: '📅 6–8 meses antes', item: 'Hotel atrações', acao: 'Reservar hospedagem para atrações de outras cidades', ok: false, obs: '' },
-    { etapa: '📅 6–8 meses antes', item: 'Ensaio da Debutante – book fotográfico', acao: 'Agendar ensaio fotográfico antes da festa', ok: false, obs: '' },
-    { etapa: '📅 6–8 meses antes', item: 'Same Day Edit (SDE)', acao: 'Decidir se haverá edição no mesmo dia e incluir no contrato', ok: false, obs: '' },
-    { etapa: '📅 6–8 meses antes', item: 'Lista de convidados – meia-noite', acao: 'Definir lista de convidados da virada (se houver)', ok: false, obs: '' },
-    { etapa: '📅 6–8 meses antes', item: 'Sapatos', acao: 'Escolher sapatos e começar a calçar para adaptar antes da festa', ok: false, obs: '' },
-    // ── 4–6 meses antes ────────────────────────────────────
-    { etapa: '📅 4–6 meses antes', item: 'Convites físicos – impressão', acao: 'Escolher design, solicitar orçamento e mandar imprimir', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'Convite digital', acao: 'Criar versão digital para WhatsApp e redes sociais', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'RSVP – confirmação de convidados', acao: 'Criar formulário digital e controlar lista de confirmados', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'Doces e sobremesas', acao: 'Escolher estilos, sabores e quantidades; agendar degustação', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'Bolo de 15 anos (mesa e vela)', acao: 'Definir tema, sabor e quantidade de andares do bolo', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'Lanches da madrugada', acao: 'Definir cardápio de lanche após meia-noite', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'Bebidas da festa', acao: 'Calcular por tipo: cerveja, refrigerante, água, drinks, etc.', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'Bartenders', acao: 'Definir quantidade e estilo (open bar, drinks temáticos)', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'Bartenders extras e quebras', acao: 'Prever bartenders reserva para horário de pico', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'Lembrancinhas', acao: 'Definir e encomendar lembrança personalizada para convidados', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'Chinelinhos', acao: 'Encomendar chinelinhos personalizados para os convidados', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'Recreação', acao: 'Contratar recreação infantil ou atração especial se houver crianças', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'Pista de leds', acao: 'Decidir sobre pista de dança com iluminação de LED e contratar', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'Decoração – flores, móveis e layout', acao: 'Definir flores, arranjos de mesa e disposição do mobiliário', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'Roupas íntimas', acao: 'Definir modeladores e lingerie compatíveis com o vestido', ok: false, obs: '' },
-    { etapa: '📅 4–6 meses antes', item: 'Jóias/acessórios', acao: 'Escolher brincos, colar, tiara ou coroa', ok: false, obs: '' },
-    // ── 3–4 meses antes ────────────────────────────────────
-    { etapa: '📅 3–4 meses antes', item: 'Equipamento de DJ', acao: 'Confirmar lista de equipamentos necessários com o DJ', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Rider Técnico / TX DJ', acao: 'Receber e revisar rider técnico com o espaço', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Sonorização festa e ambientes', acao: 'Definir sistema de som para todos os ambientes', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Iluminação Cênica ambiente', acao: 'Contratar iluminação decorativa e cênica especializada', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Iluminação de pista e Box Tru', acao: 'Confirmar iluminação de pista (moving heads, strobo, etc.)', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Telão de LED', acao: 'Definir se haverá telão de LED e onde será posicionado', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Ar condicionado', acao: 'Confirmar climatização do espaço ou contratar locação', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Caligrafa / Papelaria manuscrita', acao: 'Contratar para envelopes, tags e cardápios de mesa', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Cadeiras e Adesivo', acao: 'Contratar locação de cadeiras personalizadas com adesivo', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Garçons para Buffet', acao: 'Definir número de garçons e copeiros conforme nº de convidados', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Garçons para bebidas', acao: 'Contratar equipe específica para serviço de bebidas', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Atendentes de banheiro', acao: 'Contratar atendentes de banheiro para o evento', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Seguranças', acao: 'Contratar equipe de segurança conforme porte da festa', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Estacionamento', acao: 'Confirmar manobristas ou contrato com estacionamento próximo', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Van para transporte', acao: 'Contratar transporte para convidados ou a debutante', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Maquiagem – prova', acao: 'Fazer prova de maquiagem e aprovar o visual final', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Cabelo – prova', acao: 'Fazer prova de penteado e tirar fotos para comparar', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Vestido – provas e alterações', acao: 'Realizar provas e ajustes finais com estilista/costureira', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Homenagens (padrinhos/madrinhas)', acao: 'Definir quem serão e confirmar participação', ok: false, obs: '' },
-    { etapa: '📅 3–4 meses antes', item: 'Mestre de cerimônias (MC)', acao: 'Definir MC, alinhar roteiro e homenagens', ok: false, obs: '' },
-    // ── 2–3 meses antes ────────────────────────────────────
-    { etapa: '📅 2–3 meses antes', item: 'Gelo e copos', acao: 'Estimar consumo de gelo e contratar fornecedor', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Copeiros e lavagê', acao: 'Confirmar copeiros e lavagê com o espaço', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Rolhas', acao: 'Confirmar taxa de rolha com o espaço', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Pratos e talheres', acao: 'Contratar locadora de utensílios se o espaço não fornecer', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Copos quebrados', acao: 'Prever taxa de quebra de copos no contrato com o espaço', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Forminhas de doces', acao: 'Contratar confecção personalizada das forminhas', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Entradas (coquetel receptivo)', acao: 'Definir itens do coquetel de entrada e responsável', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Mesa de antepastos', acao: 'Definir itens da mesa de antepastos', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Cozinha / Locação da Cozinha', acao: 'Confirmar se há cozinha no espaço ou contratar locação externa', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Banheiros', acao: 'Checar estrutura existente ou contratar banheiros locados', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Gerador', acao: 'Verificar necessidade e contratar gerador de energia', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Camarim', acao: 'Organizar espaço para produção da debutante no local da festa', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Caixa banheiros', acao: 'Montar kit com itens de higiene e embalagem temática', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Alimentação para Staff', acao: 'Planejar refeição para toda equipe de fornecedores', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Menu para as mesas', acao: 'Produzir cardápios decorativos para cada mesa', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Cronograma da noite', acao: 'Planejar entradas, homenagens, brindes e horários detalhados', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Música Receptivo festa', acao: 'Definir músicas ou playlist para a recepção dos convidados', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Horas Extras Local', acao: 'Verificar e contratar horas extras do espaço se necessário', ok: false, obs: '' },
-    { etapa: '📅 2–3 meses antes', item: 'Limpeza no dia da festa', acao: 'Confirmar equipe de limpeza antes, durante e após o evento', ok: false, obs: '' },
-    // ── 1–2 meses antes ────────────────────────────────────
-    { etapa: '📅 1–2 meses antes', item: 'Ensaio da dança / valsa / coreografia', acao: 'Contratar professor de dança e iniciar ensaios', ok: false, obs: '' },
-    { etapa: '📅 1–2 meses antes', item: 'Painel de fotos / espaço instagramável', acao: 'Criar espaço decorado para fotos com convidados', ok: false, obs: '' },
-    { etapa: '📅 1–2 meses antes', item: 'Controle de gastos – revisão final', acao: 'Revisar planilha financeira e acompanhar saldo de cada fornecedor', ok: false, obs: '' },
-    { etapa: '📅 1–2 meses antes', item: 'Pagamento de fornecedores', acao: 'Planejar entradas, parcelas e vencimentos pendentes', ok: false, obs: '' },
-    { etapa: '📅 1–2 meses antes', item: 'Confirmação geral de fornecedores', acao: 'Ligar / WhatsApp para confirmar presença e horário de todos', ok: false, obs: '' },
-    // ── 1–2 semanas antes ──────────────────────────────────
-    { etapa: '📅 1–2 semanas antes', item: 'Cronograma final distribuído', acao: 'Enviar cronograma detalhado com horários para todos os fornecedores', ok: false, obs: '' },
-    { etapa: '📅 1–2 semanas antes', item: 'Dia da Debutante – confirmação beleza', acao: 'Confirmar horário no salão, maquiagem e cabelo', ok: false, obs: '' },
-    { etapa: '📅 1–2 semanas antes', item: 'Atrações – confirmação final', acao: 'Confirmar presença e logística de todas as atrações', ok: false, obs: '' },
-    { etapa: '📅 1–2 semanas antes', item: 'Checklist final pré-festa', acao: 'Revisar todos os itens, pendências e documentos do evento', ok: false, obs: '' },
+  const checkComum = [
+    ci('📌 Etapa 1 – Estrutura Básica', 'Lista de convidados', 'Definir lista principal + meia-noite'),
+    ci('📌 Etapa 1 – Estrutura Básica', 'Escolha do local', 'Visitar e reservar o espaço ideal'),
+    ci('📌 Etapa 1 – Estrutura Básica', 'Infraestrutura', 'Confirmar banheiros, energia, estacionamento'),
+    ci('🍽️ Etapa 2 – Gastronomia e Bebidas', 'Buffet', 'Degustação + fechamento do cardápio'),
+    ci('🍽️ Etapa 2 – Gastronomia e Bebidas', 'Doces', 'Escolher estilos, sabores e quantidade'),
+    ci('🍽️ Etapa 2 – Gastronomia e Bebidas', 'Bebidas', 'Calcular por tipo (cerveja, refri, água, etc.)'),
+    ci('🍽️ Etapa 2 – Gastronomia e Bebidas', 'Gelo e copos', 'Estimar consumo e contratar fornecedor'),
+    ci('🍽️ Etapa 2 – Gastronomia e Bebidas', 'Bartenders e garçons', 'Definir quantidade e contratar equipe'),
+    ci('💌 Etapa 3 – Convites e Comunicação', 'Save the Date', 'Enviar digitalmente com antecedência'),
+    ci('💌 Etapa 3 – Convites e Comunicação', 'Convites físicos', 'Escolher design e mandar imprimir'),
+    ci('💌 Etapa 3 – Convites e Comunicação', 'RSVP', 'Criar formulário e controlar confirmações'),
+    ci('💌 Etapa 3 – Convites e Comunicação', 'Caligrafia e papelaria', 'Contratar para convites e tags decorativas'),
+    ci('🕰️ Etapa 4 – Cerimonial e Roteiro', 'Cronograma da noite', 'Planejar entradas, homenagens e brindes'),
+    ci('🕰️ Etapa 4 – Cerimonial e Roteiro', 'Mestre de cerimônias', 'Definir quem será e alinhar roteiro'),
+    ci('🕰️ Etapa 4 – Cerimonial e Roteiro', 'Homenagens', 'Definir quem serão os homenageados'),
+    ci('🎨 Etapa 5 – Decoração e Cenário', 'Estilo decorativo', 'Definir paleta, mood e briefing com decorador'),
+    ci('🎨 Etapa 5 – Decoração e Cenário', 'Flores e móveis', 'Escolher em conjunto com fornecedor'),
+    ci('🎨 Etapa 5 – Decoração e Cenário', 'Lounge, mesas, pista', 'Planejar disposição do mobiliário'),
+    ci('🔊 Etapa 6 – Som, Luz e Música', 'DJ ou banda', 'Escolher estilo musical e contratar'),
+    ci('🔊 Etapa 6 – Som, Luz e Música', 'Som e iluminação', 'Confirmar rider técnico com espaço'),
+    ci('🔊 Etapa 6 – Som, Luz e Música', 'Telões e estrutura', 'Definir se haverá projeção e onde'),
+    ci('📸 Etapa 7 – Registros', 'Fotografia', 'Fechar ensaio + cobertura do evento'),
+    ci('📸 Etapa 7 – Registros', 'Filmagem', 'Definir roteiro do teaser e do vídeo final'),
+    ci('📸 Etapa 7 – Registros', 'Painel de fotos', 'Criar espaço para registros com convidados'),
+    ci('🛠️ Etapa 8 – Serviços de Apoio', 'Limpeza e seguranças', 'Contratar conforme porte da festa'),
+    ci('🛠️ Etapa 8 – Serviços de Apoio', 'Banheiro decorado', 'Criar kit personalizado para convidados'),
+    ci('🛠️ Etapa 8 – Serviços de Apoio', 'Seguro ou alvará', 'Verificar com o local e prefeitura'),
+    ci('💰 Etapa 9 – Planejamento Financeiro', 'Definir orçamento total', 'Separar por categorias (buffet, som, etc.)'),
+    ci('💰 Etapa 9 – Planejamento Financeiro', 'Controle de gastos', 'Usar planilha e acompanhar semanalmente'),
+    ci('💰 Etapa 9 – Planejamento Financeiro', 'Pagamento de fornecedores', 'Planejar entradas, parcelas e vencimentos'),
   ];
 
-  const etapa1 = [
-        { etapa: '📌 Estrutura Básica', item: 'Lista de convidados', acao: 'Definir lista principal + meia-noite', ok: false, obs: '' },
-        { etapa: '📌 Estrutura Básica', item: 'Escolha do local', acao: 'Visitar e reservar o espaço ideal', ok: false, obs: '' },
-        { etapa: '📌 Estrutura Básica', item: 'Infraestrutura', acao: 'Confirmar banheiros, energia, estacionamento', ok: false, obs: '' },
-        { etapa: '💌 Convites e Comunicação', item: 'Save the Date', acao: 'Enviar digitalmente com antecedência', ok: false, obs: '' },
-        { etapa: '💌 Convites e Comunicação', item: 'Convites físicos', acao: 'Escolher design e mandar imprimir', ok: false, obs: '' },
-        { etapa: '💌 Convites e Comunicação', item: 'RSVP', acao: 'Criar formulário e controlar confirmações', ok: false, obs: '' },
-        { etapa: '🕰️ Cerimonial e Roteiro', item: 'Cronograma da noite', acao: 'Planejar entradas, homenagens e brindes', ok: false, obs: '' },
-        { etapa: '🕰️ Cerimonial e Roteiro', item: 'Mestre de cerimônias', acao: 'Definir quem será e alinhar roteiro', ok: false, obs: '' },
-        { etapa: '🕰️ Cerimonial e Roteiro', item: 'Colação de Grau', acao: 'Confirmar local, horário e cerimônia acadêmica', ok: false, obs: '' },
-      ];
-  return [...etapa1, ...common];
+  if (tipo === 'formatura') return [
+    ...checkComum.slice(0, 3),
+    ci('🕰️ Etapa 1 – Estrutura Básica', 'Cerimonial e Roteiro', 'Planejar entradas, homenagens e brindes'),
+    ci('🕰️ Etapa 1 – Estrutura Básica', 'Mestre de cerimônias', 'Definir quem será e alinhar roteiro'),
+    ci('🕰️ Etapa 1 – Estrutura Básica', 'Colação de Grau', 'Confirmar local, horário e cerimônia acadêmica'),
+    ...checkComum.slice(3),
+  ];
+
+  // anos15
+  return checkComum;
 }
+
 
 // ==================== LOCAIS ====================
 const ITENS_GASTRO_BEBIDAS = [
@@ -2804,6 +2682,223 @@ const STANDARD_CHECKLIST = [
   saveData(events);
   localStorage.setItem('tm_checklist_v1', '1');
 })();
+
+// ==================== MATRIZ DE MODELOS ====================
+function getModelos() {
+  try {
+    const saved = localStorage.getItem('tm_modelos');
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return {
+    casamento: { cats: getTemplateItems('casamento'), checklist: getChecklistTemplate('casamento') },
+    anos15:    { cats: getTemplateItems('anos15'),    checklist: getChecklistTemplate('anos15') },
+    formatura: { cats: getTemplateItems('formatura'), checklist: getChecklistTemplate('formatura') },
+  };
+}
+function saveModelos(m) {
+  localStorage.setItem('tm_modelos', JSON.stringify(m));
+}
+
+let _mtz = { tipo: 'casamento', data: null };
+
+function showMatriz() {
+  currentEventId = null;
+  document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+  document.getElementById('menu-matriz').classList.add('active');
+  _mtz.data = getModelos();
+  _mtz.tipo = 'casamento';
+  renderMatrizPage();
+}
+
+function renderMatrizPage() {
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div style="padding:0 0 24px">
+      <h2 style="font-size:20px;font-weight:700;margin-bottom:6px">📋 Matriz de Modelos</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:18px">Defina os itens padrão de Organização Geral e Checklist para cada tipo de evento.</p>
+      <div class="matriz-tabs">
+        <button class="matriz-tab${_mtz.tipo==='casamento'?' active':''}" onclick="switchMatrizTipo('casamento')">💒 Casamento</button>
+        <button class="matriz-tab${_mtz.tipo==='anos15'?' active':''}" onclick="switchMatrizTipo('anos15')">🌸 15 Anos</button>
+        <button class="matriz-tab${_mtz.tipo==='formatura'?' active':''}" onclick="switchMatrizTipo('formatura')">🎓 Formatura</button>
+      </div>
+      <div id="mtz-body"></div>
+    </div>`;
+  renderMatrizBody();
+}
+
+function switchMatrizTipo(tipo) {
+  _mtz.tipo = tipo;
+  document.querySelectorAll('.matriz-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  renderMatrizBody();
+}
+
+function renderMatrizBody() {
+  const tipo = _mtz.tipo;
+  const modelo = _mtz.data[tipo];
+  const cats = modelo.cats || [];
+  const check = modelo.checklist || [];
+
+  // group checklist by etapa
+  const etapas = {};
+  check.forEach(c => { if (!etapas[c.etapa]) etapas[c.etapa] = []; etapas[c.etapa].push(c.item); });
+
+  let html = `
+    <div class="matriz-section">
+      <div class="matriz-section-title">📋 Organização Geral <span style="font-weight:400;font-size:11px;color:#aaa">(categorias e itens padrão)</span></div>
+      ${cats.map((cat, ci) => `
+        <div class="matriz-grupo">
+          <div class="matriz-grupo-header">
+            <input value="${esc(cat.cat || cat.nome || '')}" onchange="mtzUpdateCat(${ci}, this.value)" />
+            <button class="mtz-rm" onclick="mtzRemoveCat(${ci})" title="Remover categoria">✕</button>
+          </div>
+          <div class="matriz-grupo-items">
+            ${(cat.items||[]).map((it, ii) => `
+              <div class="matriz-item-row">
+                <input value="${esc(it.nome||it)}" onchange="mtzUpdateCatItem(${ci},${ii},this.value)" />
+                <button class="mtz-rm" onclick="mtzRemoveCatItem(${ci},${ii})">✕</button>
+              </div>`).join('')}
+            <button class="mtz-add-item" onclick="mtzAddCatItem(${ci})">+ Adicionar item</button>
+          </div>
+        </div>`).join('')}
+      <button class="mtz-add-grupo" onclick="mtzAddCat()">+ Nova Categoria</button>
+    </div>
+
+    <div class="matriz-section">
+      <div class="matriz-section-title">✅ Checklist <span style="font-weight:400;font-size:11px;color:#aaa">(etapas e itens de acompanhamento)</span></div>
+      ${Object.entries(etapas).map(([etapa, itens], ei) => `
+        <div class="matriz-grupo">
+          <div class="matriz-grupo-header">
+            <input value="${esc(etapa)}" onchange="mtzUpdateEtapa(${ei}, this.value)" />
+            <button class="mtz-rm" onclick="mtzRemoveEtapa(${ei})" title="Remover etapa">✕</button>
+          </div>
+          <div class="matriz-grupo-items">
+            ${itens.map((it, ii) => `
+              <div class="matriz-item-row">
+                <input value="${esc(it)}" onchange="mtzUpdateCheckItem(${ei},${ii},this.value)" />
+                <button class="mtz-rm" onclick="mtzRemoveCheckItem(${ei},${ii})">✕</button>
+              </div>`).join('')}
+            <button class="mtz-add-item" onclick="mtzAddCheckItem(${ei})">+ Adicionar item</button>
+          </div>
+        </div>`).join('')}
+      <button class="mtz-add-grupo" onclick="mtzAddEtapa()">+ Nova Etapa</button>
+    </div>
+
+    <div class="mtz-actions">
+      <button class="btn btn-primary" onclick="mtzSalvar()">💾 Salvar Modelo</button>
+      <button class="btn" style="background:#f0ebe0;border:1px solid var(--border)" onclick="mtzAplicarExistentes()">🔄 Aplicar a Eventos Existentes do Tipo</button>
+    </div>`;
+
+  document.getElementById('mtz-body').innerHTML = html;
+}
+
+function esc(s) { return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+// ---- Cat helpers ----
+function mtzGetEtapas() {
+  const check = _mtz.data[_mtz.tipo].checklist || [];
+  const etapas = {};
+  const order = [];
+  check.forEach(c => { if (!etapas[c.etapa]) { etapas[c.etapa] = []; order.push(c.etapa); } etapas[c.etapa].push(c.item); });
+  return { etapas, order };
+}
+function mtzEtapaToChecklist() {
+  const { etapas, order } = mtzGetEtapas();
+  return order.flatMap(etapa => etapas[etapa].map(item => ({ etapa, item, acao: '', ok: false, obs: '' })));
+}
+
+function mtzUpdateCat(ci, val) { _mtz.data[_mtz.tipo].cats[ci].cat = val; _mtz.data[_mtz.tipo].cats[ci].nome = val; }
+function mtzRemoveCat(ci) { _mtz.data[_mtz.tipo].cats.splice(ci, 1); renderMatrizBody(); }
+function mtzUpdateCatItem(ci, ii, val) { const it = _mtz.data[_mtz.tipo].cats[ci].items[ii]; if (typeof it === 'string') _mtz.data[_mtz.tipo].cats[ci].items[ii] = val; else it.nome = val; }
+function mtzRemoveCatItem(ci, ii) { _mtz.data[_mtz.tipo].cats[ci].items.splice(ii, 1); renderMatrizBody(); }
+function mtzAddCatItem(ci) { _mtz.data[_mtz.tipo].cats[ci].items.push({ nome: 'Novo item', status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' }); renderMatrizBody(); }
+function mtzAddCat() { _mtz.data[_mtz.tipo].cats.push({ cat: 'Nova Categoria', nome: 'Nova Categoria', items: [] }); renderMatrizBody(); }
+
+function mtzUpdateEtapa(ei, val) {
+  const { order } = mtzGetEtapas();
+  const old = order[ei];
+  _mtz.data[_mtz.tipo].checklist.forEach(c => { if (c.etapa === old) c.etapa = val; });
+  renderMatrizBody();
+}
+function mtzRemoveEtapa(ei) {
+  const { order } = mtzGetEtapas();
+  const etapa = order[ei];
+  _mtz.data[_mtz.tipo].checklist = _mtz.data[_mtz.tipo].checklist.filter(c => c.etapa !== etapa);
+  renderMatrizBody();
+}
+function mtzUpdateCheckItem(ei, ii, val) {
+  const { order, etapas } = mtzGetEtapas();
+  const etapa = order[ei];
+  const itemNome = etapas[etapa][ii];
+  let count = 0;
+  _mtz.data[_mtz.tipo].checklist.forEach(c => { if (c.etapa === etapa) { if (count === ii) c.item = val; count++; } });
+}
+function mtzRemoveCheckItem(ei, ii) {
+  const { order, etapas } = mtzGetEtapas();
+  const etapa = order[ei];
+  let count = 0;
+  _mtz.data[_mtz.tipo].checklist = _mtz.data[_mtz.tipo].checklist.filter(c => {
+    if (c.etapa !== etapa) return true;
+    return count++ !== ii;
+  });
+  renderMatrizBody();
+}
+function mtzAddCheckItem(ei) {
+  const { order } = mtzGetEtapas();
+  const etapa = order[ei];
+  _mtz.data[_mtz.tipo].checklist.push({ etapa, item: 'Novo item', acao: '', ok: false, obs: '' });
+  renderMatrizBody();
+}
+function mtzAddEtapa() {
+  _mtz.data[_mtz.tipo].checklist.push({ etapa: 'Nova Etapa', item: 'Novo item', acao: '', ok: false, obs: '' });
+  renderMatrizBody();
+}
+
+function mtzSalvar() {
+  saveModelos(_mtz.data);
+  toast('✅ Modelo salvo com sucesso!', 'success');
+}
+
+function mtzAplicarExistentes() {
+  const tipo = _mtz.tipo;
+  const tipoNome = { casamento: 'Casamento', anos15: '15 Anos', formatura: 'Formatura' }[tipo];
+  const modelo = _mtz.data[tipo];
+  const alvo = events.filter(e => e.tipo === tipo);
+  if (!alvo.length) { toast('Nenhum evento do tipo ' + tipoNome + ' encontrado', 'error'); return; }
+
+  if (!confirm(`Reaplicar modelo a ${alvo.length} evento(s) do tipo "${tipoNome}"?\n\nChecklist: os itens existentes serão substituídos (marcações preservadas onde o item for igual).\nOrganização Geral: categorias faltantes serão adicionadas sem remover dados existentes.`)) return;
+
+  saveModelos(_mtz.data);
+
+  alvo.forEach(ev => {
+    // Checklist: substitui mas preserva ok para itens iguais
+    const oldCheck = ev.checklist || [];
+    const okMap = {};
+    oldCheck.forEach(c => { okMap[c.etapa + '::' + c.item] = c.ok; });
+    ev.checklist = modelo.checklist.map(c => ({
+      ...c,
+      ok: okMap[c.etapa + '::' + c.item] || false,
+      obs: (oldCheck.find(o => o.etapa === c.etapa && o.item === c.item) || {}).obs || ''
+    }));
+
+    // Org Geral: adiciona categorias faltantes
+    const existingCatNames = (ev.categorias || []).map(c => (c.cat||c.nome||'').toLowerCase().trim());
+    (modelo.cats || []).forEach(mc => {
+      const mcNome = (mc.cat || mc.nome || '').toLowerCase().trim();
+      if (!existingCatNames.includes(mcNome)) {
+        ev.categorias.push({
+          cat: mc.cat || mc.nome,
+          nome: mc.cat || mc.nome,
+          items: (mc.items || []).map(it => ({ nome: it.nome || it, status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' })),
+          pacotes: []
+        });
+      }
+    });
+  });
+
+  saveData(events);
+  toast(`✅ Modelo aplicado a ${alvo.length} evento(s)!`, 'success');
+}
 
 // ==================== INIT ====================
 showDashboard();

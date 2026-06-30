@@ -2486,34 +2486,35 @@ function printEvento(id) {
     orgHtml += `<tr class="cat-header"><td colspan="4">${cat.cat || cat.nome}</td></tr>${catRows}`;
   });
 
-  // === CHECKLIST ===
+  // === CHECKLIST (baseado em categorias, igual à tela) ===
   let checkHtml = '';
-  const etapas = {};
-  (ev.checklist || []).forEach(c => {
-    if (!etapas[c.etapa]) etapas[c.etapa] = [];
-    etapas[c.etapa].push(c);
-  });
-  Object.entries(etapas).forEach(([etapa, items]) => {
-    const done = items.filter(c => c.ok).length;
-    checkHtml += `<tr class="cat-header"><td colspan="4">${etapa} <span style="font-weight:400;font-size:9pt">(${done}/${items.length})</span></td></tr>`;
-    items.forEach(c => {
-      const prazoSug = calcPrazoSugerido(ev.data, etapa);
-      const prazoExibir = c.prazo || prazoSug;
+  let total = 0, feitos = 0;
+  (ev.categorias || []).forEach(cat => {
+    const catNome = cat.cat || cat.nome || '';
+    const prazoSug = calcPrazoSugerido(ev.data, catNome);
+    const rows = [
+      ...cat.items.filter(it => !it.pacoteId).map(it => ({ it, nome: it.nome })),
+      ...(cat.pacotes || []).map(p => ({ it: p, nome: `📦 ${p.nome}` })),
+    ];
+    if (!rows.length) return;
+    const catDone = rows.filter(({it}) => isCkDone(it)).length;
+    checkHtml += `<tr class="cat-header"><td colspan="4">${catNome} <span style="font-weight:400;font-size:9pt">(${catDone}/${rows.length})</span></td></tr>`;
+    rows.forEach(({it, nome}) => {
+      const ckDone = isCkDone(it);
+      const prazoExibir = it.prazo || prazoSug;
       const prazoFmt = prazoExibir ? fmtPrazo(prazoExibir) : '—';
-      const prazoAtrasado = !c.ok && prazoExibir && new Date(prazoExibir) < new Date();
-      const obs = c.obs ? `<br><small style="color:#666">${c.obs}</small>` : '';
-      const acaoTxt = c.acao ? `<small style="color:#555">${c.acao}</small>` : '';
-      checkHtml += `<tr${c.ok ? ' class="chk-done-row"' : ''}>
-        <td style="width:22px;text-align:center"><span class="chk-box${c.ok?' chk-ok':''}">${c.ok?'✓':''}</span></td>
-        <td>${c.item}${obs}${acaoTxt?'<br>'+acaoTxt:''}</td>
-        <td style="width:90px;text-align:center;font-size:9pt;${prazoAtrasado?'color:#dc2626;font-weight:700':prazoExibir&&!c.ok?'color:#d97706':''}">${prazoFmt}</td>
-        <td style="width:60px;text-align:center;font-size:9pt">${c.ok?'<span style="color:#16a34a;font-weight:700">✓ Feito</span>':'Pendente'}</td>
+      const prazoAtrasado = !ckDone && prazoExibir && new Date(prazoExibir) < new Date();
+      const obs = it.obs ? `<br><small style="color:#666">${it.obs}</small>` : '';
+      checkHtml += `<tr${ckDone ? ' class="chk-done-row"' : ''}>
+        <td style="width:22px;text-align:center"><span class="chk-box${ckDone?' chk-ok':''}">${ckDone?'✓':''}</span></td>
+        <td>${nome}${obs}</td>
+        <td style="width:90px;text-align:center;font-size:9pt;${prazoAtrasado?'color:#dc2626;font-weight:700':prazoExibir&&!ckDone?'color:#d97706':''}">${prazoFmt}</td>
+        <td style="width:60px;text-align:center;font-size:9pt">${ckDone?'<span style="color:#16a34a;font-weight:700">✓ Feito</span>':'Pendente'}</td>
       </tr>`;
+      total++;
+      if (ckDone) feitos++;
     });
   });
-
-  const total = (ev.checklist || []).length;
-  const feitos = (ev.checklist || []).filter(c => c.ok).length;
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">

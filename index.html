@@ -2881,10 +2881,13 @@ function mtzAplicarExistentes() {
       obs: (oldCheck.find(o => o.etapa === c.etapa && o.item === c.item) || {}).obs || ''
     }));
 
-    // Org Geral: adiciona categorias faltantes
-    const existingCatNames = (ev.categorias || []).map(c => (c.cat||c.nome||'').toLowerCase().trim());
+    // Org Geral: adiciona categorias faltantes (ignora emojis e acentos na comparação)
+    function normCat(s) {
+      return (s||'').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}\u{2300}-\u{23FF}]/gu,'').replace(/[^\w\s]/g,'').toLowerCase().trim().replace(/\s+/g,' ');
+    }
+    const existingCatNames = (ev.categorias || []).map(c => normCat(c.cat||c.nome||''));
     (modelo.cats || []).forEach(mc => {
-      const mcNome = (mc.cat || mc.nome || '').toLowerCase().trim();
+      const mcNome = normCat(mc.cat || mc.nome || '');
       if (!existingCatNames.includes(mcNome)) {
         ev.categorias.push({
           cat: mc.cat || mc.nome,

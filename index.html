@@ -1309,7 +1309,7 @@ function renderEventDetail(ev) {
       <div class="fin-card total"><div class="fin-label">Valor Total Contrato</div><div class="fin-value">${fmtMoney(valor)}</div></div>
       <div class="fin-card pago"><div class="fin-label">Total Pago</div><div class="fin-value">${fmtMoney(pago)}</div></div>
       <div class="fin-card saldo"><div class="fin-label">Saldo em Aberto</div><div class="fin-value">${fmtMoney(valor - pago)}</div></div>
-      <div class="fin-card"><div class="fin-label">Checklist</div><div class="fin-value">${ev.checklist.filter(c=>c.ok).length}/${ev.checklist.length}</div></div>
+      <div class="fin-card"><div class="fin-label">Checklist</div><div class="fin-value" id="ck-count">${calcCkCount(ev)}</div></div>
     </div>
 
     <div class="tabs">
@@ -1330,6 +1330,15 @@ function switchTab(tab) {
   renderTabContent(ev);
 }
 
+function calcCkCount(ev) {
+  let total = 0, done = 0;
+  ev.categorias.forEach(cat => {
+    cat.items.filter(it => !it.pacoteId).forEach(it => { total++; if (it.ok) done++; });
+    (cat.pacotes || []).forEach(p => { total++; if (p.ok) done++; });
+  });
+  return `${done}/${total}`;
+}
+
 function updateFinSummary(ev) {
   let valor = 0, pago = 0, prev = 0;
   ev.categorias.forEach(cat => {
@@ -1345,6 +1354,8 @@ function updateFinSummary(ev) {
       if (v) v.textContent = vals[i];
     }
   });
+  const ckEl = document.getElementById('ck-count');
+  if (ckEl) ckEl.textContent = calcCkCount(ev);
 }
 
 function renderTabContent(ev) {
@@ -1513,111 +1524,138 @@ function renderOrganizacao(ev, container) {
   container.innerHTML = html;
 }
 
-function renderChecklist(ev, container) {
-  const total = ev.checklist.length;
-  const done = ev.checklist.filter(c => c.ok).length;
-  const pct = total ? Math.round(done / total * 100) : 0;
-  const progressColor = pct < 30 ? 'var(--danger)' : pct < 70 ? 'var(--warning)' : 'var(--success)';
-  const mesesRestantes = getMesesAteEvento(ev.data);
+function ckItemStatus(ok, prazo, prazoSug, mesesRestantes, catNome) {
+  if (ok) return 'ok';
+  const prazoExibir = prazo || prazoSug;
+  if (prazoExibir) {
+    const meses = (new Date(prazoExibir) - new Date()) / (1000*60*60*24*30.44);
+    if (meses < 0) return 'atrasado';
+    if (meses < 1.5) return 'urgente';
+    return 'ok';
+  }
+  if (mesesRestantes === null) return 'ok';
+  const maxM = getEtapaMaxMeses(catNome);
+  const minM = getEtapaMinMeses(catNome);
+  if (mesesRestantes < minM) return 'atrasado';
+  if (mesesRestantes <= maxM) return 'urgente';
+  return 'ok';
+}
 
-  const etapas = {};
-  ev.checklist.forEach((c, i) => {
-    if (!etapas[c.etapa]) etapas[c.etapa] = [];
-    etapas[c.etapa].push({ ...c, _i: i });
+function renderChecklist(ev, container) {
+  const mesesRestantes = getMesesAteEvento(ev.data);
+  const mesesLabel = mesesRestantes !== null
+    ? `<span style="font-size:12px;color:var(--muted);margin-left:10px">📅 ${Math.round(mesesRestantes*10)/10} meses até o evento</span>`
+    : '';
+
+  // Build flat list of all items from categorias
+  let total = 0, done = 0;
+  const atrasados = [], urgentes = [];
+  const catGroups = [];
+
+  ev.categorias.forEach((cat, ci) => {
+    const catNome = cat.cat;
+    const prazoSug = calcPrazoSugerido(ev.data, catNome);
+    const rows = [];
+
+    cat.items.filter(it => !it.pacoteId).forEach((it, ii) => {
+      const st = ckItemStatus(it.ok, it.prazo, prazoSug, mesesRestantes, catNome);
+      rows.push({ it, ref: `'${ev.id}',${ci},'item',${ii}`, st, prazoSug });
+      total++;
+      if (it.ok) done++;
+      if (st === 'atrasado') atrasados.push({ it, catNome, ref: `'${ev.id}',${ci},'item',${ii}` });
+      else if (st === 'urgente') urgentes.push({ it, catNome, ref: `'${ev.id}',${ci},'item',${ii}` });
+    });
+    (cat.pacotes || []).forEach((pac, pi) => {
+      const st = ckItemStatus(pac.ok, pac.prazo, prazoSug, mesesRestantes, catNome);
+      rows.push({ it: pac, ref: `'${ev.id}',${ci},'pac',${pi}`, st, prazoSug, isPac: true });
+      total++;
+      if (pac.ok) done++;
+      if (st === 'atrasado') atrasados.push({ it: pac, catNome, ref: `'${ev.id}',${ci},'pac',${pi}` });
+      else if (st === 'urgente') urgentes.push({ it: pac, catNome, ref: `'${ev.id}',${ci},'pac',${pi}` });
+    });
+
+    if (rows.length) catGroups.push({ cat, ci, catNome, prazoSug, rows });
   });
 
-  // Collect atrasados
-  const atrasados = ev.checklist.map((c, i) => ({...c, _i: i}))
-    .filter(c => getItemStatus(c.etapa, c.ok, mesesRestantes, c.prazo) === 'atrasado');
-  const urgentes = ev.checklist.map((c, i) => ({...c, _i: i}))
-    .filter(c => getItemStatus(c.etapa, c.ok, mesesRestantes, c.prazo) === 'urgente');
+  const pct = total ? Math.round(done/total*100) : 0;
+  const progressColor = pct < 30 ? 'var(--danger)' : pct < 70 ? 'var(--warning)' : 'var(--success)';
 
-  // Phase summary chips
-  const phaseChips = Object.entries(etapas).map(([etapa, items]) => {
-    const d = items.filter(i => i.ok).length;
-    const isDone = d === items.length;
-    const hasAtrasado = items.some(i => getItemStatus(etapa, i.ok, mesesRestantes, i.prazo) === 'atrasado');
-    const attr = isDone ? 'class="phase-chip done"' : hasAtrasado ? `class="phase-chip" style="background:#ffe0e0;border-color:#f5c6c6;color:var(--danger)"` : 'class="phase-chip"';
-    return `<span ${attr} title="${d}/${items.length} concluídos">${etapa.replace('📅 ', '')}: ${d}/${items.length}</span>`;
+  const phaseChips = catGroups.map(({catNome, rows}) => {
+    const d = rows.filter(r=>r.it.ok).length;
+    const isDone = d === rows.length;
+    const hasAt = rows.some(r=>r.st==='atrasado');
+    const attr = isDone ? 'class="phase-chip done"'
+      : hasAt ? `class="phase-chip" style="background:#ffe0e0;border-color:#f5c6c6;color:var(--danger)"`
+      : 'class="phase-chip"';
+    return `<span ${attr}>${catNome}: ${d}/${rows.length}</span>`;
   }).join('');
 
   let html = '';
 
-  // Atrasados section
+  // Atrasados
   if (atrasados.length > 0) {
     html += `<div class="atrasado-section">
-      <div class="atrasado-section-title">
-        ⚠️ Itens Atrasados
+      <div class="atrasado-section-title">⚠️ Itens Atrasados
         <span class="atrasado-count">${atrasados.length}</span>
-        <span style="font-size:11px;font-weight:400;color:var(--danger)">— o prazo já passou e ainda não foram concluídos</span>
-      </div>
-      <div class="atrasado-list">`;
-    atrasados.forEach(c => {
+        <span style="font-size:11px;font-weight:400;color:var(--danger)">— prazo passou e ainda não concluídos</span>
+      </div><div class="atrasado-list">`;
+    atrasados.forEach(({it, catNome, ref}) => {
       html += `<div class="atrasado-item">
-        <input type="checkbox" class="atrasado-item-cb check-cb" ${c.ok?'checked':''} onchange="toggleCheck('${ev.id}',${c._i},this.checked)">
+        <input type="checkbox" class="check-cb" ${it.ok?'checked':''} onchange="toggleCkItem(${ref},this.checked)">
         <div class="atrasado-item-text">
-          <div class="atrasado-item-name">${c.item}</div>
-          <div class="atrasado-item-etapa">${c.etapa.replace('📅 ','')} · ${c.acao}</div>
-        </div>
-      </div>`;
+          <div class="atrasado-item-name">${it.nome}</div>
+          <div class="atrasado-item-etapa">${catNome}</div>
+        </div></div>`;
     });
     html += `</div></div>`;
   }
 
-  // Urgentes section (apenas se tem data)
+  // Urgentes
   if (urgentes.length > 0 && mesesRestantes !== null) {
     html += `<div style="background:#fffbf0;border:1.5px solid #ffd966;border-radius:10px;padding:14px 18px;margin-bottom:20px;">
       <div style="font-size:13px;font-weight:700;color:var(--warning);margin-bottom:10px;display:flex;align-items:center;gap:8px;">
         🔔 Atenção – Prazo chegando
         <span style="background:var(--warning);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px">${urgentes.length}</span>
-        <span style="font-size:11px;font-weight:400;color:#a07800">— contrate agora para não atrasar</span>
-      </div>
-      <div class="atrasado-list">`;
-    urgentes.forEach(c => {
+      </div><div class="atrasado-list">`;
+    urgentes.forEach(({it, catNome, ref}) => {
       html += `<div class="atrasado-item" style="border-color:#ffd966">
-        <input type="checkbox" class="check-cb" ${c.ok?'checked':''} onchange="toggleCheck('${ev.id}',${c._i},this.checked)">
+        <input type="checkbox" class="check-cb" ${it.ok?'checked':''} onchange="toggleCkItem(${ref},this.checked)">
         <div class="atrasado-item-text">
-          <div class="atrasado-item-name">${c.item}</div>
-          <div class="atrasado-item-etapa">${c.etapa.replace('📅 ','')} · ${c.acao}</div>
-        </div>
-      </div>`;
+          <div class="atrasado-item-name">${it.nome}</div>
+          <div class="atrasado-item-etapa">${catNome}</div>
+        </div></div>`;
     });
     html += `</div></div>`;
   }
 
-  // Global progress box
-  const mesesLabel = mesesRestantes !== null
-    ? `<span style="font-size:12px;color:var(--muted);margin-left:10px">📅 ${Math.round(mesesRestantes * 10) / 10} meses até o evento</span>`
-    : '';
-  html += `
-    <div class="global-progress-box">
-      <div class="global-progress-header">
-        <div>
-          <div class="global-progress-title">Progresso Geral do Checklist ${mesesLabel}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">${done} de ${total} itens concluídos</div>
-        </div>
-        <div class="global-progress-pct" style="color:${progressColor}">${pct}%</div>
+  // Progress box
+  html += `<div class="global-progress-box">
+    <div class="global-progress-header">
+      <div>
+        <div class="global-progress-title">Progresso Geral ${mesesLabel}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${done} de ${total} itens concluídos</div>
       </div>
-      <div class="global-progress-track">
-        <div class="global-progress-fill" id="global-pb" style="width:${pct}%;background:${progressColor}"></div>
-      </div>
-      <div class="global-progress-phases">${phaseChips}</div>
-    </div>`;
+      <div class="global-progress-pct" style="color:${progressColor}">${pct}%</div>
+    </div>
+    <div class="global-progress-track"><div class="global-progress-fill" style="width:${pct}%;background:${progressColor}"></div></div>
+    <div class="global-progress-phases">${phaseChips}</div>
+  </div>`;
 
-  for (const [etapa, items] of Object.entries(etapas)) {
-    const etKey = ev.id + '_etapa_' + etapa.replace(/[^a-z0-9]/gi,'_');
+  // Categories
+  catGroups.forEach(({cat, ci, catNome, prazoSug, rows}) => {
+    const etKey = ev.id + '_ck_' + ci;
     const collapsed = collapsedEtapas[etKey];
-    const etDone = items.filter(i => i.ok).length;
-    const etPct = Math.round(etDone / items.length * 100);
-    const etAtrasados = items.filter(i => getItemStatus(etapa, i.ok, mesesRestantes, i.prazo) === 'atrasado').length;
-    const etColor = etAtrasados > 0 ? 'var(--danger)' : etPct === 100 ? 'var(--success)' : etPct < 70 ? 'var(--warning)' : 'var(--success)';
-    const atrasadoTag = etAtrasados > 0 ? `<span style="font-size:10px;background:var(--danger);color:#fff;border-radius:8px;padding:1px 7px;font-weight:700;margin-left:6px">${etAtrasados} atrasado${etAtrasados>1?'s':''}</span>` : '';
+    const etDone = rows.filter(r=>r.it.ok).length;
+    const etPct = Math.round(etDone/rows.length*100);
+    const etAt = rows.filter(r=>r.st==='atrasado').length;
+    const etColor = etAt>0?'var(--danger)':etPct===100?'var(--success)':etPct<70?'var(--warning)':'var(--success)';
+    const atTag = etAt>0?`<span style="font-size:10px;background:var(--danger);color:#fff;border-radius:8px;padding:1px 7px;font-weight:700;margin-left:6px">${etAt} atrasado${etAt>1?'s':''}</span>`:'';
 
-    html += `<div class="cat-section ${collapsed ? 'cat-collapsed' : ''}">
+    html += `<div class="cat-section ${collapsed?'cat-collapsed':''}">
       <div class="cat-header" onclick="toggleEtapa('${etKey}')">
-        <div class="cat-title">${etapa}${atrasadoTag} <span style="font-size:11px;color:var(--muted);font-weight:400">(${items.length} itens)</span></div>
+        <div class="cat-title">${catNome}${atTag} <span style="font-size:11px;color:var(--muted);font-weight:400">(${rows.length} itens)</span></div>
         <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:12px;color:var(--muted)">${etDone}/${items.length}</span>
+          <span style="font-size:12px;color:var(--muted)">${etDone}/${rows.length}</span>
           <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;background:${etColor}22;color:${etColor};border:1px solid ${etColor}55">${etPct}%</span>
           <span class="cat-arrow">▼</span>
         </div>
@@ -1625,43 +1663,31 @@ function renderChecklist(ev, container) {
 
     if (!collapsed) {
       html += `<div class="etapa-progress-bar-wrap" style="border-radius:0;margin:0"><div class="etapa-progress-fill" style="width:${etPct}%;background:${etColor}"></div></div>
-      <table class="checklist-table"><tbody>`;
-      items.forEach(c => {
-        const st = getItemStatus(etapa, c.ok, mesesRestantes, c.prazo);
-        const rowClass = c.ok ? 'done' : st === 'atrasado' ? 'row-atrasado' : '';
-        const tag = !c.ok && st === 'atrasado' ? '<span class="atrasado-tag">ATRASADO</span>'
-                  : !c.ok && st === 'urgente'   ? '<span class="urgente-tag">URGENTE</span>' : '';
-        const prazoSug = calcPrazoSugerido(ev.data, etapa);
-        const prazoVal = c.prazo || '';
+        <table class="checklist-table"><tbody>`;
+      rows.forEach(({it, ref, st, prazoSug}) => {
+        const prazoVal = it.prazo || '';
         const prazoExibir = prazoVal || prazoSug;
-        const prazoAtrasado = !c.ok && prazoExibir && new Date(prazoExibir) < new Date();
-        const prazoColor = c.ok ? '' : prazoAtrasado ? 'color:var(--danger);font-weight:600' : prazoExibir ? 'color:var(--warning)' : 'color:var(--muted)';
+        const rowClass = it.ok ? 'done' : st==='atrasado' ? 'row-atrasado' : '';
+        const tag = !it.ok && st==='atrasado' ? '<span class="atrasado-tag">ATRASADO</span>'
+                  : !it.ok && st==='urgente'  ? '<span class="urgente-tag">URGENTE</span>' : '';
+        const prazoAtrasado = !it.ok && prazoExibir && new Date(prazoExibir) < new Date();
+        const prazoColor = it.ok ? '' : prazoAtrasado ? 'color:var(--danger);font-weight:600' : prazoExibir ? 'color:var(--warning)' : 'color:var(--muted)';
         html += `<tr class="${rowClass}">
-          <td style="width:34px;text-align:center"><input type="checkbox" class="check-cb" ${c.ok?'checked':''} onchange="toggleCheck('${ev.id}',${c._i},this.checked)"></td>
-          <td class="check-item" style="width:180px">${c.item}${tag}</td>
-          <td style="width:120px;text-align:center">
-            <input type="date" value="${prazoVal}" placeholder="${prazoSug}"
-              style="border:none;background:transparent;font-size:12px;${prazoColor};cursor:pointer;width:110px"
-              title="Data limite${prazoVal?'':' (sugerida: '+fmtPrazo(prazoSug)+')'}"
-              onchange="updateCheck('${ev.id}',${c._i},'prazo',this.value)">
+          <td style="width:34px;text-align:center"><input type="checkbox" class="check-cb" ${it.ok?'checked':''} onchange="toggleCkItem(${ref},this.checked)"></td>
+          <td class="check-item" style="width:200px">${it.nome}${tag}</td>
+          <td style="width:130px;text-align:center">
+            <input type="date" value="${prazoVal}" title="Prazo${!prazoVal&&prazoSug?' (sugerido: '+fmtPrazo(prazoSug)+')':''}"
+              style="border:none;background:transparent;font-size:12px;${prazoColor};cursor:pointer;width:120px"
+              onchange="updateCkItem(${ref},'prazo',this.value)">
           </td>
-          <td class="check-acao"><input class="check-obs-input" value="${(c.acao||'').replace(/"/g,'&quot;')}" placeholder="Ação..." onchange="updateCheck('${ev.id}',${c._i},'acao',this.value)"></td>
-          <td style="width:200px"><input class="check-obs-input" value="${(c.obs||'').replace(/"/g,'&quot;')}" placeholder="Observação..." onchange="updateCheck('${ev.id}',${c._i},'obs',this.value)"></td>
-          <td style="width:30px;text-align:center"><button onclick="deleteChecklistItem('${ev.id}',${c._i})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;padding:2px 4px" title="Remover item">✕</button></td>
+          <td style="width:220px"><input class="check-obs-input" value="${(it.obs||'').replace(/"/g,'&quot;')}" placeholder="Observação..." onchange="updateCkItem(${ref},'obs',this.value)"></td>
         </tr>`;
       });
-      html += `</tbody></table>
-      <div class="add-item-row" style="padding:6px 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-        <input id="cl-inp-${ev.id}-${etapa.replace(/[^a-z0-9]/gi,'_')}" placeholder="Novo item do checklist..." style="flex:1;min-width:140px;font-size:13px">
-        <input id="cl-acao-${ev.id}-${etapa.replace(/[^a-z0-9]/gi,'_')}" placeholder="Ação..." style="flex:1;min-width:140px;font-size:13px">
-        <button class="add-btn" onclick="addChecklistItem('${ev.id}','${etapa.replace(/'/g,"\\'")}','cl-inp-${ev.id}-${etapa.replace(/[^a-z0-9]/gi,'_')}','cl-acao-${ev.id}-${etapa.replace(/[^a-z0-9]/gi,'_')}')" style="font-size:12px;padding:5px 12px;white-space:nowrap;display:block">➕ Adicionar</button>
-      </div>`;
+      html += `</tbody></table>`;
     }
     html += `</div>`;
-  }
-  html += `<div style="padding:10px 14px 4px">
-    <button onclick="addChecklistEtapa('${ev.id}')" style="background:none;border:1px dashed var(--border);border-radius:6px;padding:6px 16px;font-size:13px;color:var(--muted);cursor:pointer">➕ Nova etapa</button>
-  </div>`;
+  });
+
   container.innerHTML = html;
 }
 
@@ -2159,23 +2185,45 @@ function setStatus(evId, status) {
 
 function toggleCheck(evId, idx, val) {
   const ev = events.find(e => e.id === evId);
-  ev.checklist[idx].ok = val;
+  if (ev && ev.checklist[idx]) ev.checklist[idx].ok = val;
   saveData(events);
-  // update row style
-  const rows = document.querySelectorAll('.checklist-table tbody tr');
-  // simple re-render
-  const tc = document.getElementById('tab-content');
-  renderChecklist(ev, tc);
-  // update fin summary count
-  document.querySelectorAll('.fin-card')[3].querySelector('.fin-value').textContent =
-    ev.checklist.filter(c => c.ok).length + '/' + ev.checklist.length;
 }
 
 function updateCheck(evId, idx, field, val) {
   const ev = events.find(e => e.id === evId);
-  ev.checklist[idx][field] = val;
+  if (ev && ev.checklist[idx]) ev.checklist[idx][field] = val;
   saveData(events);
-  if (field === 'prazo') renderTabContent(ev);
+}
+
+function _getCkTarget(ev, ci, type, idx) {
+  if (type === 'item') return ev.categorias[ci].items[idx];
+  if (type === 'pac')  return ev.categorias[ci].pacotes[idx];
+  return null;
+}
+
+function toggleCkItem(evId, ci, type, idx, val) {
+  const ev = events.find(e => e.id === evId);
+  if (!ev) return;
+  const target = _getCkTarget(ev, ci, type, idx);
+  if (!target) return;
+  target.ok = val;
+  saveData(events);
+  const tc = document.getElementById('tab-content');
+  renderChecklist(ev, tc);
+  updateFinSummary(ev);
+}
+
+function updateCkItem(evId, ci, type, idx, field, val) {
+  const ev = events.find(e => e.id === evId);
+  if (!ev) return;
+  const target = _getCkTarget(ev, ci, type, idx);
+  if (!target) return;
+  target[field] = val;
+  saveData(events);
+  if (field === 'prazo') {
+    const tc = document.getElementById('tab-content');
+    renderChecklist(ev, tc);
+  }
 }
 
 function deleteChecklistItem(evId, idx) {

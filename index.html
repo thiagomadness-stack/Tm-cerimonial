@@ -2937,7 +2937,8 @@ function renderMatrizBody() {
 
     <div class="mtz-actions">
       <button class="btn btn-primary" onclick="mtzSalvar()">💾 Salvar Modelo</button>
-      <button class="btn" style="background:#f0ebe0;border:1px solid var(--border)" onclick="mtzAplicarExistentes()">🔄 Aplicar a Eventos Existentes do Tipo</button>
+      <button class="btn" style="background:#e0f0e8;border:1px solid #86efac;color:#166534" onclick="mtzAplicarUmEvento()">🎯 Aplicar a Evento Específico</button>
+      <button class="btn" style="background:#f0ebe0;border:1px solid var(--border)" onclick="mtzAplicarExistentes()">🔄 Aplicar a Todos os Eventos do Tipo</button>
       <button class="btn" style="background:#fee2e2;border:1px solid #fca5a5;color:#b91c1c" onclick="mtzRemoverDuplicatas()">🧹 Remover Categorias Duplicadas (Todos os Eventos)</button>
     </div>`;
 
@@ -3036,6 +3037,62 @@ function mtzRemoverDuplicatas() {
   } else {
     toast('Nenhuma duplicata encontrada.', '');
   }
+}
+
+function mtzAplicarUmEvento() {
+  const tipo = _mtz.tipo;
+  const tipoNome = { casamento: 'Casamento', anos15: '15 Anos', formatura: 'Formatura' }[tipo];
+  const modelo = _mtz.data[tipo];
+  const todos = events.filter(e => e.tipo === tipo);
+  if (!todos.length) { toast('Nenhum evento do tipo ' + tipoNome + ' encontrado', 'error'); return; }
+
+  // Monta lista de eventos para selecionar
+  const opts = todos.map(ev => `<option value="${ev.id}">${ev.nome} — ${ev.data || 'sem data'}</option>`).join('');
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center';
+  div.innerHTML = `
+    <div style="background:#fff;border-radius:12px;padding:28px 32px;min-width:340px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.18)">
+      <div style="font-size:16px;font-weight:700;margin-bottom:6px">🎯 Aplicar Modelo a Evento Específico</div>
+      <div style="font-size:13px;color:#888;margin-bottom:18px">Tipo: <b>${tipoNome}</b></div>
+      <select id="mtz-ev-select" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-bottom:18px">${opts}</select>
+      <div style="font-size:12px;color:#888;margin-bottom:18px">Categorias faltantes serão adicionadas sem remover dados existentes.</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="this.closest('div[style*=fixed]').remove()" style="padding:8px 18px;border-radius:8px;border:1px solid #d1d5db;background:#f5f5f5;cursor:pointer;font-size:13px">Cancelar</button>
+        <button id="mtz-ev-confirm" style="padding:8px 18px;border-radius:8px;border:none;background:#166534;color:#fff;cursor:pointer;font-size:13px;font-weight:600">✅ Aplicar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(div);
+
+  div.querySelector('#mtz-ev-confirm').onclick = () => {
+    const evId = div.querySelector('#mtz-ev-select').value;
+    const ev = events.find(e => e.id === evId);
+    if (!ev) { toast('Evento não encontrado', 'error'); div.remove(); return; }
+
+    saveModelos(_mtz.data);
+
+    // Org Geral: adiciona categorias faltantes
+    function normCat(s) {
+      return (s||'').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}\u{2300}-\u{23FF}]/gu,'').replace(/[^\w\s]/g,'').toLowerCase().trim().replace(/\s+/g,' ');
+    }
+    const existingCatNames = (ev.categorias || []).map(c => normCat(c.cat||c.nome||''));
+    let adicionadas = 0;
+    (modelo.cats || []).forEach(mc => {
+      const mcNome = normCat(mc.cat || mc.nome || '');
+      if (!existingCatNames.includes(mcNome)) {
+        ev.categorias.push({
+          cat: mc.cat || mc.nome,
+          nome: mc.cat || mc.nome,
+          items: (mc.items || []).map(it => ({ nome: it.nome || it, status: 'pendente', obs: '', valor: 0, pago: 0, parc: '' })),
+          pacotes: []
+        });
+        adicionadas++;
+      }
+    });
+
+    saveData(events);
+    div.remove();
+    toast(`✅ Modelo aplicado em "${ev.nome}" — ${adicionadas} categoria(s) adicionada(s)!`, 'success');
+  };
 }
 
 function mtzAplicarExistentes() {
